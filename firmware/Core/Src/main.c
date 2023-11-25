@@ -45,9 +45,8 @@ int main(void){
 
 		}
 		if( check>=5 && pacState==PAC_FOUND){
-			i2cError=I2C1_SendSingleByte(pacAddress,PAC1954_REFRESH_V);
-			if( i2cError != 1){
-				LPUART1_SendString("I2C:Error->");
+			if( PAC1954_doRefreshV(pacAddress) != I2C_OK){
+				LPUART1_SendString("I2C:Error -> ");
 				LPUART1_SendHex(i2cError);
 				LPUART1_SendString("\r\n");
 				check=0;
@@ -58,38 +57,14 @@ int main(void){
 		if( check>=10 && pacState==PAC_REFRESHED){
 
 			// Read Vbus, Vsense
-			i2cError=I2C1_Read16bitData( pacAddress, PAC1954_VBUSN_REG, 8,recBuffer);
-			if( i2cError == 1){
-				lastVoltCur.out3_voltage = recBuffer[0];
-				lastVoltCur.out4_voltage = recBuffer[1];
-				lastVoltCur.out1_voltage = recBuffer[2];
-				lastVoltCur.out2_voltage = recBuffer[3];
-
-				lastVoltCur.out3_current = recBuffer[4];
-				lastVoltCur.out4_current = recBuffer[5];
-				lastVoltCur.out1_current = recBuffer[6];
-				lastVoltCur.out2_current = recBuffer[7];
-				pacState=PAC_FOUND;
-				sendData();
-			}else if(i2cError==0x11){
-				LPUART1_SendString("I2C:TimeOut\r\n");
-			}else if(i2cError==0x12){
-				LPUART1_SendString("I2C:TimeOut2\r\n");
-			}else if(i2cError==0x13){
-				LPUART1_SendString("I2C:TimeOut3\r\n");
-			}else if(i2cError==0x14){
-				LPUART1_SendString("I2C:TimeOut4\r\n");
-			}else{
-				i2cError++;
-			}
+			sendPAC_VC_Data();
 
 			//readAccumulator(1);
 			//readAccumulator(2);
 			//readAccumulator(3);
 			readAccumulator(4);
 
-			pacState=PAC_FOUND;
-			check=0;
+			check=0; // Reset counter
 		}
 		if( LPUART1_hasCmd() ){
 			LPUART1_Transfer_Buffer();
@@ -169,10 +144,12 @@ void init(void){
 
     configure_IO();
 
+
     LPUART1_SendString("I>Booting...\r\n");
     delay = 10; // wait a bit
     while(delay!=0); // 10ms delay
 
+    /* Read the settings from the internal E²PROM */
     if( sizeof(settings_t) % 4 ==0){ // Needs to be a multiple of 4 because e²prom has 32bit pages
     	// Get the settings from e²prom
     	memcpy(GLOBAL_settings_ptr, (uint32_t*)DATA_E2_ADDR, sizeof(settings_t));
@@ -181,7 +158,7 @@ void init(void){
     		resetSettings();
     	}
     }
-    pacAddress = _settings_in_ram.pacAddress;
+    pacAddress = _settings_in_ram.pacAddress; // Get the read address
 
     // Check if I2C hardware is found
     LPUART1_SendString("I>PAC1954:");
@@ -202,27 +179,21 @@ void init(void){
 
 void configure_IO(void){
   
-  /* Enable the peripheral clock of GPIOA and GPIOB */
+  /* Enable the peripheral clock of GPIOA (inputs) and GPIOB (heartbeat) */
   RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
-  /* Enable the SYStemConfiguration peripheral clock, this handles interrupts */
-  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
-  /* INPUTS */
+
+  /* INPUTS & Interrupts*/
+  /* Enable the SYStemConfiguration peripheral clock, this handles interrupts */
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
   /* 
     A6 = U2 alert1
     A7 = U2 alert2
-    B4 = Outside of board, testing
   */  
   GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODER_MODE6 | GPIO_MODER_MODE7)); // Make PA6 & PA7 inputs
 
-  GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE4)); // Make PB4 inputs
-  GPIOB->PUPDR = (GPIOB->PUPDR & ~(GPIO_PUPDR_PUPD4))|GPIO_PUPDR_PUPD4_0; // Pull up on PB4
-
-  /* EXTICR[0]= pins 0-3  EXTICR[1]=4-7  EXTICR[2]= 8-11 EXTICR[2]=12-15 ==> Need 6 and 7 so both in EXTICR[1] */
-  /* This is set with the SYSCFG_EXTICRx_EXTIy_Pz macros -> x=2 because second set, y=6 or 7 for the pin number and z is A for the port*/
-
-  SYSCFG->EXTICR[1] &= ~(SYSCFG_EXTICR2_EXTI4_Msk|SYSCFG_EXTICR2_EXTI6_Msk|SYSCFG_EXTICR2_EXTI7_Msk); // First clear the bits that define the port of for pin 4, 6 and 7 (inverse means all other bits remain as they were)
-  SYSCFG->EXTICR[1] |= (SYSCFG_EXTICR2_EXTI4_PB|SYSCFG_EXTICR2_EXTI6_PA|SYSCFG_EXTICR2_EXTI7_PA); // Then set the pins 6 and 7 to select port A and pin 4 to B
+  SYSCFG->EXTICR[1] &= ~(SYSCFG_EXTICR2_EXTI6_Msk|SYSCFG_EXTICR2_EXTI7_Msk); // First clear the bits that define the port of for pin 6 and 7 (inverse means all other bits remain as they were)
+  SYSCFG->EXTICR[1] |= (SYSCFG_EXTICR2_EXTI6_PA|SYSCFG_EXTICR2_EXTI7_PA); // Then set the pins 6 and 7 to select port A
 
   /* Next up is enabling the interrupt */
   EXTI->IMR |= (EXTI_IMR_IM4|EXTI_IMR_IM6|EXTI_IMR_IM7); // Enable interrupt for both 6 and 7, no need to clear anything first
@@ -245,7 +216,6 @@ void configure_IO(void){
 }
 
 /* ******************************************** I 2 C ******************************************************** */
-
 
 void I2C1_FindDevices(){
 
@@ -278,31 +248,7 @@ void I2C1_FindDevices(){
 	LPUART1_SendHex(tmp);
 	LPUART1_SendString(" devices\r\n");
 }
-uint8_t I2C1_FindPAC1954(){
-
-	uint8_t addr;
-	LPUART1_SendString("I>PAC?");
-	/* Clear the address and bytes to send spot, then fill them in*/
-	for( addr=0x10;addr<0x20;addr++){
-		switch( I2C1_PokeDevice(addr) ){
-			case 0x00:
-				LPUART1_SendByte('.'); // Show some progress?
-				break;
-			case 0x01:
-				LPUART1_SendHex(addr);
-				LPUART1_SendString("\r\n");
-				return addr;
-			case ERROR_I2C_TIMEOUT:
-				LPUART1_SendString("TIMEOUT\r\n");//Stop searching
-				return 0xFF;
-		}
-		delay = 50; // wait a bit
-		while(delay!=0); // 50ms delay
-	}
-	LPUART1_SendString("FAILED\r\n");
-	return 0xFF;
-}
-/* ***************************************** U S A R T ******************************************************* */
+/* ***************************************** C L I ******************************************************* */
 void executeCommand( uint8_t * cmd ){
     uint8_t ok = 0xFF;
 
@@ -321,7 +267,7 @@ void executeCommand( uint8_t * cmd ){
     	  }*/
     	  break;
       case 'p': // Send last voltage and sense reading for all channels
-    	  sendData();
+    	  sendPAC_VC_Data();
     	  break;
     }
     LPUART1_SendBytes(cmd);
@@ -331,59 +277,80 @@ void executeCommand( uint8_t * cmd ){
     	LPUART1_SendString(":OK\r\n");
     }
 }
-void sendData(){
-	  LPUART1_SendString("VC:");
-	  LPUART1_SendHex(pacAddress);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out1_voltage);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out1_current);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out2_voltage);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out2_current);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out3_voltage);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out3_current);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out4_voltage);
-	  LPUART1_SendString(";");
-	  LPUART1_SendDec(lastVoltCur.out4_current);
-	  LPUART1_SendString("\r\n");
+/* ***************************************** P A C 1 9 5 4  ******************************************************* */
+void sendPAC_VC_Data(){
+
+	switch( PAC1954_readVoltageCurrent( pacAddress, &lastVoltCur ) ){
+		case I2C_OK:
+			LPUART1_SendString("VC:");
+			LPUART1_SendHex(pacAddress);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out1_voltage);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out1_current);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out2_voltage);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out2_current);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out3_voltage);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out3_current);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out4_voltage);
+			LPUART1_SendString(";");
+			LPUART1_SendDec(lastVoltCur.out4_current);
+			LPUART1_SendString("\r\n");
+			pacState=PAC_FOUND;
+			break;
+		case 0x11: LPUART1_SendString("I2C:TimeOut1\r\n"); break;
+		case 0x12: LPUART1_SendString("I2C:TimeOut2\r\n"); break;
+		case 0x13: LPUART1_SendString("I2C:TimeOut3\r\n"); break;
+		case 0x14: LPUART1_SendString("I2C:TimeOut4\r\n"); break;
+	}
 }
 void readAccumulator( uint8_t acc ){
-	i2cError=I2C1_Read8bitData( pacAddress, 0x02+acc , 7,recBuffer8bit);
-	if( i2cError == 1){
-		LPUART1_SendString("AC;");
-		switch(acc){
-			case 1:LPUART1_SendByte('3'); break;
-			case 2:LPUART1_SendByte('4'); break;
-			case 3:LPUART1_SendByte('1'); break;
-			case 4:LPUART1_SendByte('2'); break;
-		}
 
-		LPUART1_SendString(";");
-		LPUART1_SendHex(recBuffer8bit[0]);
-		LPUART1_SendByteHexNoPrefix(recBuffer8bit[1]);
-		LPUART1_SendByteHexNoPrefix(recBuffer8bit[2]);
-		LPUART1_SendByteHexNoPrefix(recBuffer8bit[3]);
-		LPUART1_SendByteHexNoPrefix(recBuffer8bit[4]);
-		LPUART1_SendByteHexNoPrefix(recBuffer8bit[5]);
-		LPUART1_SendByteHexNoPrefix(recBuffer8bit[6]);
-		LPUART1_SendString(";");
+	// Read the accumulator data
+	switch( I2C1_Read8bitData( pacAddress, 0x02+acc , 7,recBuffer8bit) ){
+		case I2C_OK:
+			LPUART1_SendString("AC;");
+			switch(acc){
+				case 1:LPUART1_SendByte('3'); break;
+				case 2:LPUART1_SendByte('4'); break;
+				case 3:LPUART1_SendByte('1'); break;
+				case 4:LPUART1_SendByte('2'); break;
+			}
+
+			LPUART1_SendString(";");
+			LPUART1_SendHex(recBuffer8bit[0]);
+			LPUART1_SendByteHexNoPrefix(recBuffer8bit[1]);
+			LPUART1_SendByteHexNoPrefix(recBuffer8bit[2]);
+			LPUART1_SendByteHexNoPrefix(recBuffer8bit[3]);
+			LPUART1_SendByteHexNoPrefix(recBuffer8bit[4]);
+			LPUART1_SendByteHexNoPrefix(recBuffer8bit[5]);
+			LPUART1_SendByteHexNoPrefix(recBuffer8bit[6]);
+			LPUART1_SendString(";");
+		break;
+		case 0x11: LPUART1_SendString("I2C:TimeOut1\r\n"); break;
+		case 0x12: LPUART1_SendString("I2C:TimeOut2\r\n"); break;
+		case 0x13: LPUART1_SendString("I2C:TimeOut3\r\n"); break;
+		case 0x14: LPUART1_SendString("I2C:TimeOut4\r\n"); break;
 	}
-	i2cError=I2C1_Read16bitData( pacAddress, PAC1954_ACC_CNT_REG , 2,recBuffer);
-	if( i2cError == 1){
-		LPUART1_SendHex(recBuffer[0]);
-		LPUART1_SendWordHexNoPrefix(recBuffer[1]);
+
+	// Read the accumulator count
+	uint32_t cnt = PAC1954_readAccCount(pacAddress);
+	if( cnt!=0 ){
+		LPUART1_Send32bitHex(cnt);
+	}else{
+		LPUART1_SendString("0x0");
 	}
 	LPUART1_SendString("\r\n");
 }
 /* ************************************* E E P R O M ************************************************************** */
 void resetSettings(){
 	// Find pac
-	_settings_in_ram.pacAddress = I2C1_FindPAC1954();
+	_settings_in_ram.pacAddress = PAC1954_findAddress();
 	_settings_in_ram.out1_lowvlim=10000;
 	_settings_in_ram.out1_highvlim=16000;
 	_settings_in_ram.out1_curlim=2000;
@@ -459,7 +426,6 @@ void EXTI4_15_IRQHandler(void){
 /******************************************************************************/
 /*            Cortex-M0 Plus Processor Exceptions Handlers                    */
 /******************************************************************************/
-
 /* This function handles SysTick Handler.  */
 void SysTick_Handler(void){
     Tick++;
@@ -470,11 +436,6 @@ void SysTick_Handler(void){
 		}
 	}
 
-    if( Tick % 100 == 1 ){
-		/*if( I2C1_SendSingleByte(pacAddress,PAC1954_REFRESH_N)==0){
-			heartBeats=0;
-		}*/
-	}
     if( delay != 0 ){
     	delay--;
     	if( delay == 40 ){
@@ -490,3 +451,19 @@ void SysTick_Handler(void){
     	HEART_OFF;
     }
 }
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

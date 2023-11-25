@@ -9,7 +9,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "./stm32l0xx.h"
 #include "./core_cm0plus.h"
-
+#include <string.h>
 /* Variables -----------------------------------------------------------------*/
 
 /* Private includes ----------------------------------------------------------*/
@@ -17,7 +17,7 @@ extern "C" {
 #include "lpuart1.h"
 #include "i2c1.h"
 #include "eeprom.h"
-#include <string.h>
+#include "pac1954.h"
 
 /* External variables ---------------------------------------------------------*/
 
@@ -32,14 +32,15 @@ void Error_Handler(void);
 void SystemClock_Config(void);
 void init(void);
 void configure_IO(void);
-void Output_Enable( uint8_t out );  // Toggle a specific output on
-void Output_Disable( uint8_t out ); // Toggle a specific output off
-void Disable_All_Outputs( void );      // Toggle all outputs off
-void Enable_All_Outputs( void );
+
 void executeCommand( uint8_t * cmd );
-void sendData(void);
-uint8_t I2C1_FindPAC1954(void);
+
+// PAC1954
+void sendPAC_VC_Data(void);
 void readAccumulator( uint8_t acc );
+void I2C1_FindDevices(void);
+uint8_t I2C1_FindPAC1954(void);
+
 void resetSettings(void);
 uint32_t settings_write(void);
 void EXTI4_15_IRQ_handler(void);
