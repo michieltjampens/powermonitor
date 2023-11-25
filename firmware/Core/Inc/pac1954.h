@@ -29,6 +29,15 @@
 	uint8_t PAC1954_readVoltageCurrent( uint8_t address, voltcur *lastVoltCur );
 	uint32_t PAC1954_readAccCount( uint8_t address ); // Read the content of the accumulator counter register
 	uint8_t PAC1954_doRefreshV( uint8_t address);
+	uint8_t PAC1954_checkState(void);
+	// Alerts
+	uint32_t PAC1954_readAlertStatus(uint8_t address);
+	uint32_t PAC1954_readAlertEnable(uint8_t address);
+	// Limits
+	uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit );
+	uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch );
+
+	uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg);
 	/* Sense to position translation */
 
 	/* Refresh cmds */
@@ -86,5 +95,22 @@
 	#define PAC1954_PRODUCT_ID			0xFD	// 1 byte (8bit)
 	#define PAC1954_MANUF_ID_REG		0xFE	// 1 byte (8bit)
 	#define PAC1954_REVISION_ID_REG		0xFF	// 1 byte (8bit)
+
+
+	/* ALERT ENABLE MACRO'S */
+	#define PAC_OV_ALERT_EN_CH1		0x008000  // bit 15 set
+	#define PAC_OV_ALERT_EN_CH2		0x004000  // bit 14 set
+	#define PAC_OV_ALERT_EN_CH3		0x002000  // bit 13 set
+	#define PAC_OV_ALERT_EN_CH4		0x001000  // bit 12 set
+
+	#define PAC_UV_ALERT_EN_CH1		0x000800  // bit 11 set
+	#define PAC_UV_ALERT_EN_CH2		0x000400  // bit 10 set
+	#define PAC_UV_ALERT_EN_CH3		0x000200  // bit  9 set
+	#define PAC_UV_ALERT_EN_CH4		0x000100  // bit  8 set
+
+	#define PAC_OP_ALERT_EN_CH1		0x000080  // bit 7 set
+	#define PAC_OP_ALERT_EN_CH2		0x000040  // bit 6 set
+	#define PAC_OP_ALERT_EN_CH3		0x000020  // bit 5 set
+	#define PAC_OP_ALERT_EN_CH4		0x000010  // bit 4 set
 
 #endif /* INC_PAC1954_H_ */

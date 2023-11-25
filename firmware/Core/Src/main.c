@@ -37,6 +37,9 @@ int main(void){
 
 	init();
 
+
+	PAC1954_setOVLimit(pacAddress,2,0x4321);
+
 	// To test RAM '.data' section initialization:
 	//static int dont_panic = 42;
 	while (1) {
@@ -55,15 +58,7 @@ int main(void){
 			}
 		}
 		if( check>=10 && pacState==PAC_REFRESHED){
-
-			// Read Vbus, Vsense
-			sendPAC_VC_Data();
-
-			//readAccumulator(1);
-			//readAccumulator(2);
-			//readAccumulator(3);
-			readAccumulator(4);
-
+			readAll();
 			check=0; // Reset counter
 		}
 		if( LPUART1_hasCmd() ){
@@ -278,6 +273,22 @@ void executeCommand( uint8_t * cmd ){
     }
 }
 /* ***************************************** P A C 1 9 5 4  ******************************************************* */
+void readAll(){
+	sendPAC_VC_Data(); // Read Vbus, Vsense
+	//readAccumulator(1);
+	//readAccumulator(2);
+	//readAccumulator(3);
+	readAccumulator(4);
+	delay = 3; // wait a bit
+	while(delay!=0); // 3ms delay
+	readAlertStatus();
+	delay = 3; // wait a bit
+	while(delay!=0); // 3ms delay
+	readAlertEnable();
+	delay = 3; // wait a bit
+	while(delay!=0); // 3ms delay
+	readOVLimits();
+}
 void sendPAC_VC_Data(){
 
 	switch( PAC1954_readVoltageCurrent( pacAddress, &lastVoltCur ) ){
@@ -346,6 +357,44 @@ void readAccumulator( uint8_t acc ){
 		LPUART1_SendString("0x0");
 	}
 	LPUART1_SendString("\r\n");
+}
+void readAlertStatus(){
+	uint32_t status = PAC1954_readAlertStatus(pacAddress);
+	LPUART1_SendString("AS:"); // Header
+	LPUART1_SendHex(pacAddress); // address of PAC
+	LPUART1_SendString(";");
+	if( PAC1954_checkState() == 1){
+		LPUART1_Send32bitHex(status);
+	}else{
+		LPUART1_SendString("-1");
+	}
+	LPUART1_SendString("\r\n");
+}
+void readAlertEnable(){
+	uint32_t status = PAC1954_readAlertEnable(pacAddress);
+	LPUART1_SendString("AE:"); // Header
+	LPUART1_SendHex(pacAddress); // address of PAC
+	LPUART1_SendString(";");
+	if( PAC1954_checkState() == 1){
+		LPUART1_Send32bitHex(status);
+	}else{
+		LPUART1_SendString("-1");
+	}
+	LPUART1_SendString("\r\n");
+}
+void readOVLimits(){
+	LPUART1_SendString("OVL:");
+	LPUART1_SendHex(pacAddress);
+	LPUART1_SendString(";");
+	LPUART1_SendHex(PAC1954_readOVlimit( pacAddress, 1 ));
+	LPUART1_SendString(";");
+	LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 2 ) );
+	//LPUART1_SendString(";");
+	//LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 3 ) );
+	//LPUART1_SendString(";");
+	//LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 4 ) );
+	LPUART1_SendString("\r\n");
+
 }
 /* ************************************* E E P R O M ************************************************************** */
 void resetSettings(){

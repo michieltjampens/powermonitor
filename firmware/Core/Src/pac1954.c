@@ -61,3 +61,72 @@ uint8_t PAC1954_doRefreshV( uint8_t address){
 uint8_t PAC1954_checkState(){
 	return state;
 }
+/* ********************************* L I M I T S ****************************************** */
+uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+	uint8_t buffer[4];
+	buffer[0] = PAC1954_OV_LMTN_1_REG+(chn-1); // Address of the register
+	buffer[1] = limit/0xFF;
+	buffer[2] = limit%0x100;
+
+	//uint32_t alerts = PAC1954_read24bitRegister(address,PAC1954_ALERT_EN_REG); // Read alerts
+
+	// Set the limit
+	state=I2C1_SendData(addr, 3, buffer);
+	// Enable the alert for it
+	/*
+	if( alerts == 0xFFFFFFFF ){
+		return 0; // Failed
+	}
+	alerts |= (PAC_OV_ALERT_EN_CH1>>(chn-1)); // Alter it
+
+	buffer[0] = PAC1954_ALERT_EN_REG;
+	buffer[3]=alerts % 0x100;
+	alerts/=0xFF;
+	buffer[2]=alerts % 0x100;
+	alerts/=0xFF;
+	buffer[1]=alerts % 0x100;
+	state=I2C1_SendData(addr, 4, buffer); // Send it back?
+*/
+	return state;
+}
+uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch ){
+	uint16_t recBuffer[2];
+	state=0x00;
+	if( I2C1_Read16bitData( address, PAC1954_OV_LMTN_1_REG+(ch-1) , 1,recBuffer) == I2C_OK ){
+		state=0x01;
+		return recBuffer[0];
+	}
+
+	return 0x00;
+}
+
+/* ********************************* A L E R T ******************************************** */
+/**
+ * Reads the current value of the alert status register return 0xFFFFFFFF if failed
+ */
+uint32_t PAC1954_readAlertStatus(uint8_t address){
+	return PAC1954_read24bitRegister(address,PAC1954_ALERT_STS_REG);
+}
+/**
+ * Reads the current value of the alert enable register return 0xFFFFFFFF if failed
+ */
+uint32_t PAC1954_readAlertEnable(uint8_t address){
+	return PAC1954_read24bitRegister(address,PAC1954_ALERT_EN_REG);
+}
+/* ************************ U T I L I T Y ************************************************ */
+uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg){
+	uint8_t recBuffer[3];
+	state=0;
+	uint8_t res = I2C1_Read8bitData( address, reg ,3,recBuffer);
+	if( res == I2C_OK ){
+		state=1;
+		uint32_t status = recBuffer[0];
+		status *= 0x10000;
+		status += recBuffer[1];
+		status *= 0x10000;
+		status += recBuffer[2];
+		return status;
+	}
+	return 0xFFFFFFFF;
+}
+/* **************************************************************************************** */
