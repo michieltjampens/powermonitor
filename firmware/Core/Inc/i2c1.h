@@ -30,6 +30,7 @@ uint8_t I2C1_PokeDevice( uint8_t i2c_Address );
 void I2C1_IRQHandler(void);
 
 /* Private defines -----------------------------------------------------------*/
+#define I2C_OK 0x01
 #define ERROR_I2C 0x10
 #define ERROR_I2C_TIMEOUT  0x11
 #define ERROR_I2C_TIMEOUT2 0x12

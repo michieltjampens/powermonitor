@@ -173,7 +173,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 			return ERROR_I2C_TIMEOUT4;
 		}
 	}
-	return 1;
+	return I2C_OK;
 }
 
 /* *********************************** U T I L I T Y ************************************************* */
