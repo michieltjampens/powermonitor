@@ -1,4 +1,4 @@
-# Power Logger
+# Power Monitor
 
 Small board to monitor power consumption of attached devices.
 
