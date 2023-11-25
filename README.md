@@ -1,30 +1,25 @@
-# Power Logger
+# Power Monitor
 
-Small board to monitor power consumption of attached devices.
+Small board to monitor power consumption of attached devices. 
+Working either standalone with data stored on onboard flash or realtime by sending measurements to PC through USB.
+
+## Features
+- Up to 4 concurrent devices monitored.
+- 30V maximum system voltage, haven't tested the current limit yet.
+- 8MB local flash storage
+- Onboard programmer/debugger/usb to uart with [STLINK V3MODS](https://www.st.com/en/development-tools/stlink-v3mods.html)
+- Long term energy consumption measurement (days)
 
 ## Progress
 - Currently testing rev0
   - Programming and lpuart via vcp work (but had to swap rx/tx)
   - I2C and PAC1954 work
   - Script written for dcafs that reads, processes and stores voltage,current and energy 
-- Changes for rev 0 -> rev 1
-  - Moved LPUART1 TX to PA2 because then you have the option to use USART2 instead.
-  - Fixed pinout of STMOD RX/TX swapped?
-  - Added EMI filter to I2C to connector
-  - Move hearbeat from PB5 to PA3
-  - Added resistors on the uart lines, maybe for filter
-  - General cleanup of traces/vias and the like
 
 ## Todo
 - Flash via spi -> store and download data
 - PAC Alerts
 - RTC
-
-## Features
-- Up to 4 concurrent devices monitored.
-- 8MB local flash storage
-- Onboard programmer/debugger/usb to uart with [STLINK V3MODS](https://www.st.com/en/development-tools/stlink-v3mods.html)
-- Maximum 30V, haven't tested the current limit yet.
 
 ## Repo folders content
 ### board
