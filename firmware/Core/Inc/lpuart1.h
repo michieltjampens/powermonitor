@@ -33,6 +33,7 @@ void LPUART1_SendArray( uint8_t *buffer, uint8_t length );
 void LPUART1_SendByte( uint8_t data );
 void LPUART1_SendDec( uint16_t nr );
 void LPUART1_SendHex( uint16_t number );
+void LPUART1_Send32bitHex( uint32_t nr );
 void LPUART1_SendByteHexNoPrefix( uint8_t nr );
 void LPUART1_SendWordHexNoPrefix( uint16_t nr );
 void LPUART1_SendCRLF(void);

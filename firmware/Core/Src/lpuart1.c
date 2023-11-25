@@ -195,6 +195,23 @@ void LPUART1_SendHex( uint16_t nr ){
 	}
 	LPUART1_SendBytes(data);
 }
+void LPUART1_Send32bitHex( uint32_t nr ){
+	uint8_t data[11]={'0','x','0','0','0','0','0','0','0','0',0};
+	uint8_t tmp;
+	uint8_t index=9;
+	while( index > 1 ){
+		tmp = nr%16;
+		if(tmp>9){
+			data[index]= tmp+55;
+		}else{
+			data[index] = tmp + '0';
+		}
+		nr -= tmp;
+		nr /= 16;
+		index --;
+	}
+	LPUART1_SendBytes(data);
+}
 void LPUART1_SendWordHexNoPrefix( uint16_t nr ){
 	uint8_t data[5]={'0','0','0','0',0};
 	uint8_t tmp;
