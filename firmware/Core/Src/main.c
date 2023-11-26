@@ -13,7 +13,7 @@ uint8_t pacAddress=0x00;
 uint16_t heartBeats=0;
 uint16_t recBuffer[12];
 uint8_t recBuffer8bit[8];
-uint8_t check=0;
+uint16_t check=0;
 uint8_t pacState=0;
 uint8_t temp=0;
 
@@ -38,29 +38,26 @@ int main(void){
 	init();
 
 
-	PAC1954_setOVLimit(pacAddress,2,0x4321);
+	//PAC1954_setOVLimit(pacAddress,2,0x4321);
 
 	// To test RAM '.data' section initialization:
 	//static int dont_panic = 42;
 	while (1) {
 
-		if( error != 0x00){
-
-		}
-		if( check>=5 && pacState==PAC_FOUND){
-			if( PAC1954_doRefreshV(pacAddress) != I2C_OK){
-				LPUART1_SendString("I2C:Error -> ");
-				LPUART1_SendHex(i2cError);
-				LPUART1_SendString("\r\n");
-				check=0;
-			}else{
-				pacState=PAC_REFRESHED;
-			}
-		}
-		if( check>=10 && pacState==PAC_REFRESHED){
+		if( check>=100 && pacState==PAC_REFRESHED){ // Minimim of 10ms between refresh and readout
 			readAll();
 			check=0; // Reset counter
 		}
+		if( check>=98 && pacState==PAC_FOUND){
+			if( PAC1954_doRefreshV(pacAddress) == I2C_OK){
+				pacState=PAC_REFRESHED;
+			}else{
+				LPUART1_SendString("I2C:Refresh Error -> ");
+				LPUART1_SendHex(i2cError);
+				LPUART1_SendString("\r\n");
+			}
+		}
+
 		if( LPUART1_hasCmd() ){
 			LPUART1_Transfer_Buffer();
 		}
@@ -276,87 +273,84 @@ void executeCommand( uint8_t * cmd ){
 void readAll(){
 	sendPAC_VC_Data(); // Read Vbus, Vsense
 	//readAccumulator(1);
-	//readAccumulator(2);
-	//readAccumulator(3);
+	readAccumulator(2);
+	readAccumulator(3);
 	readAccumulator(4);
-	delay = 3; // wait a bit
-	while(delay!=0); // 3ms delay
 	readAlertStatus();
-	delay = 3; // wait a bit
-	while(delay!=0); // 3ms delay
 	readAlertEnable();
-	delay = 3; // wait a bit
-	while(delay!=0); // 3ms delay
 	readOVLimits();
 }
 void sendPAC_VC_Data(){
-
-	switch( PAC1954_readVoltageCurrent( pacAddress, &lastVoltCur ) ){
-		case I2C_OK:
+	uint8_t res = PAC1954_readVoltageCurrent( pacAddress, &lastVoltCur );
+	if( res==I2C_OK ){
 			LPUART1_SendString("VC:");
 			LPUART1_SendHex(pacAddress);
-			LPUART1_SendString(";");
+			LPUART1_SendByte(';');
 			LPUART1_SendDec(lastVoltCur.out1_voltage);
-			LPUART1_SendString(";");
+			LPUART1_SendByte(';');
 			LPUART1_SendDec(lastVoltCur.out1_current);
 			LPUART1_SendString(";");
 			LPUART1_SendDec(lastVoltCur.out2_voltage);
-			LPUART1_SendString(";");
+			LPUART1_SendByte(';');
 			LPUART1_SendDec(lastVoltCur.out2_current);
-			LPUART1_SendString(";");
+			LPUART1_SendByte(';');
 			LPUART1_SendDec(lastVoltCur.out3_voltage);
 			LPUART1_SendString(";");
 			LPUART1_SendDec(lastVoltCur.out3_current);
-			LPUART1_SendString(";");
+			LPUART1_SendByte(';');
 			LPUART1_SendDec(lastVoltCur.out4_voltage);
-			LPUART1_SendString(";");
+			LPUART1_SendByte(';');
 			LPUART1_SendDec(lastVoltCur.out4_current);
 			LPUART1_SendString("\r\n");
 			pacState=PAC_FOUND;
-			break;
-		case 0x11: LPUART1_SendString("I2C:TimeOut1\r\n"); break;
-		case 0x12: LPUART1_SendString("I2C:TimeOut2\r\n"); break;
-		case 0x13: LPUART1_SendString("I2C:TimeOut3\r\n"); break;
-		case 0x14: LPUART1_SendString("I2C:TimeOut4\r\n"); break;
+	}else{
+		LPUART1_SendString("I2C:VC Error->");
+		printI2Cerror(res);
+		LPUART1_SendString("\r\n");
+	}
+}
+
+void printI2Cerror(uint8_t error){
+	switch(error){
+		case ERROR_I2C_NO_TXE_EMTPY:    LPUART1_SendString("Transfer Busy"); break;
+		case ERROR_I2C_NO_BUSY_FLAG :   LPUART1_SendString("Busy Flag"); break;
+		case ERROR_I2C_NO_TC_DETECT :   LPUART1_SendString("No TC");     break;
+		case ERROR_I2C_NO_BUSY_FLAG2:   LPUART1_SendString("No Busy 2"); break;
+		case ERROR_I2C_NO_STOP_DT:	    LPUART1_SendString("STOP DT");   break;
+		case ERROR_I2C_DATA_REC_DELAY:  LPUART1_SendString("REC Delay"); break;
+		default: LPUART1_SendString("Other"); break;
 	}
 }
 void readAccumulator( uint8_t acc ){
 
 	// Read the accumulator data
-	switch( I2C1_Read8bitData( pacAddress, 0x02+acc , 7,recBuffer8bit) ){
-		case I2C_OK:
-			LPUART1_SendString("AC;");
-			switch(acc){
-				case 1:LPUART1_SendByte('3'); break;
-				case 2:LPUART1_SendByte('4'); break;
-				case 3:LPUART1_SendByte('1'); break;
-				case 4:LPUART1_SendByte('2'); break;
-			}
+	uint8_t res = I2C1_Read8bitData( pacAddress, 0x02+acc , 7,recBuffer8bit);
+	if( res==I2C_OK ){
+		LPUART1_SendString("AC:");
+		LPUART1_SendHex(pacAddress);
+		switch(acc){
+			case 1:LPUART1_SendString(";3;"); break;
+			case 2:LPUART1_SendString(";4;"); break;
+			case 3:LPUART1_SendString(";1;"); break;
+			case 4:LPUART1_SendString(";2;"); break;
+		}
+		LPUART1_SendHex(recBuffer8bit[0]);
+		LPUART1_SendBytesHexNoPrefix(&recBuffer8bit[1],6);
+		LPUART1_SendByte(';');
 
-			LPUART1_SendString(";");
-			LPUART1_SendHex(recBuffer8bit[0]);
-			LPUART1_SendByteHexNoPrefix(recBuffer8bit[1]);
-			LPUART1_SendByteHexNoPrefix(recBuffer8bit[2]);
-			LPUART1_SendByteHexNoPrefix(recBuffer8bit[3]);
-			LPUART1_SendByteHexNoPrefix(recBuffer8bit[4]);
-			LPUART1_SendByteHexNoPrefix(recBuffer8bit[5]);
-			LPUART1_SendByteHexNoPrefix(recBuffer8bit[6]);
-			LPUART1_SendString(";");
-		break;
-		case 0x11: LPUART1_SendString("I2C:TimeOut1\r\n"); break;
-		case 0x12: LPUART1_SendString("I2C:TimeOut2\r\n"); break;
-		case 0x13: LPUART1_SendString("I2C:TimeOut3\r\n"); break;
-		case 0x14: LPUART1_SendString("I2C:TimeOut4\r\n"); break;
-	}
-
-	// Read the accumulator count
-	uint32_t cnt = PAC1954_readAccCount(pacAddress);
-	if( cnt!=0 ){
-		LPUART1_Send32bitHex(cnt);
+		// Read the accumulator count
+		uint32_t cnt = PAC1954_readAccCount(pacAddress);
+		if( cnt!=0 ){
+			LPUART1_Send32bitHex(cnt);
+		}else{
+			LPUART1_SendString("0x0");
+		}
+		LPUART1_SendString("\r\n");
 	}else{
-		LPUART1_SendString("0x0");
+		LPUART1_SendString("I2C:AC Error->");
+		printI2Cerror(res);
+		LPUART1_SendString("\r\n");
 	}
-	LPUART1_SendString("\r\n");
 }
 void readAlertStatus(){
 	uint32_t status = PAC1954_readAlertStatus(pacAddress);
@@ -386,15 +380,14 @@ void readOVLimits(){
 	LPUART1_SendString("OVL:");
 	LPUART1_SendHex(pacAddress);
 	LPUART1_SendString(";");
-	LPUART1_SendHex(PAC1954_readOVlimit( pacAddress, 1 ));
+	LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 1 ) );
 	LPUART1_SendString(";");
 	LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 2 ) );
-	//LPUART1_SendString(";");
-	//LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 3 ) );
-	//LPUART1_SendString(";");
-	//LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 4 ) );
+	LPUART1_SendString(";");
+	LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 3 ) );
+	LPUART1_SendString(";");
+	LPUART1_SendHex( PAC1954_readOVlimit( pacAddress, 4 ) );
 	LPUART1_SendString("\r\n");
-
 }
 /* ************************************* E E P R O M ************************************************************** */
 void resetSettings(){
@@ -479,7 +472,7 @@ void EXTI4_15_IRQHandler(void){
 void SysTick_Handler(void){
     Tick++;
 
-	if( Tick % 100 == 0){
+	if( Tick % 10 == 0){
 		if( pacState >= PAC_FOUND){
 			check++;
 		}

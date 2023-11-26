@@ -44,7 +44,7 @@ void readAlertEnable(void);
 void readOVLimits(void);
 void I2C1_FindDevices(void);
 uint8_t I2C1_FindPAC1954(void);
-
+void printI2Cerror(uint8_t error);
 void resetSettings(void);
 uint32_t settings_write(void);
 void EXTI4_15_IRQ_handler(void);

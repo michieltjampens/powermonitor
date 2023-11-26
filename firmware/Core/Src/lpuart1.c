@@ -5,6 +5,7 @@
 
 /* Shared variables ----------------------------------------------------------*/
 __IO uint8_t cmdReady;
+uint8_t free = CIRCULAR-1;
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -41,14 +42,6 @@ void LPUART1_Configure(){
     LPUART1_Configure_Setup();
 
     cmdReady=0;
-}
-/**
- * Get the space in the buffer
- */
-uint8_t LPUART1_Buffer_Free(void){
-	if( inputEnd > inputStart )
-		return inputEnd-inputStart;
-	return (inputTail-inputStart)+(inputEnd-inputHead);
 }
 void LPUART1_Configure_GPIO(void){
   /* Enable the peripheral clock of GPIOA */
@@ -107,7 +100,28 @@ void LPUART1_Configure_Setup(void){
 	NVIC_EnableIRQ(LPUART1_IRQn);
 }
 
+void writeByte( uint8_t data ){
+	if( free == CIRCULAR-1 ){ // So buffer not in use
+		if( (LPUART1->ISR & USART_ISR_TXE) == USART_ISR_TXE){// Bit set, so TDR is empty send it directly
+			LPUART1->TDR = data;
+			return;
+		}
+	}
+	while( free < 3){ // this shouldn't happen often, unless the buffer is actually to small?
+		if( (LPUART1->ISR & USART_ISR_TXE) == USART_ISR_TXE){
+			 LPUART1->TDR = *outStart++; // This also clears the complete flag
+			 free++;
+			 if (outStart == outTail) { // So never write on the tail!
+				 outStart = outHead;    // End reached, back to head
+			 }
+		}
+	}
+	free--;
+	*outEnd++ = data;
+	if (outEnd == outTail) // So never write on the tail!
+		outEnd = outHead;  // End reached, back to head
 
+}
 /**
  * Brief Send elements from an array in the send buffer till a 0x00 is found
  * Param
@@ -117,12 +131,8 @@ void LPUART1_Configure_Setup(void){
  */
 void LPUART1_SendBytes( uint8_t *buffer ){
     while( *buffer != 0x00){
-        *outEnd++ = *buffer++;
-        if (outEnd == outTail) { // So never write on the tail!
-            outEnd = outHead;    // End reached, back to head
-        }
+        writeByte(*buffer++);
     }
-    LPUART1_Check_Circular();
 }
 
 /**
@@ -135,24 +145,16 @@ void LPUART1_SendBytes( uint8_t *buffer ){
  */
 void LPUART1_SendArray( uint8_t *buffer, uint8_t length ){
     while( length != 0x00){
-        *outEnd++ = *buffer++;
-        if (outEnd == outTail) { // So never write on the tail!
-            outEnd = outHead;    // End reached, back to head
-        }
+    	writeByte(*buffer++);
         length--;
     }
-    LPUART1_Check_Circular();
 }
 void LPUART1_SendArrayReversed( uint8_t *buffer, uint8_t length ){
 	buffer= buffer+length-1;
     while( length != 0x00){
-        *outEnd++ = *buffer--;
-        if (outEnd == outTail) { // So never write on the tail!
-            outEnd = outHead;    // End reached, back to head
-        }
+    	writeByte(*buffer--);
         length--;
     }
-    LPUART1_Check_Circular();
 }
 /**
  * Brief Send a single byte of data
@@ -248,6 +250,26 @@ void LPUART1_SendByteHexNoPrefix( uint8_t nr ){
 	}
 	LPUART1_SendBytes(data);
 }
+void LPUART1_SendBytesHexNoPrefix( uint8_t *nrs, uint8_t length ){
+	uint8_t tmp;
+
+	while( length != 0x00){
+		tmp = *nrs/16;
+		if(tmp>9){
+			writeByte(tmp+55);
+		}else{
+			writeByte(tmp + '0');
+		}
+		tmp = *nrs%16;
+		if(tmp>9){
+			writeByte(tmp+55);
+		}else{
+			writeByte(tmp + '0');
+		}
+        nrs++;
+        length--;
+    }
+}
 void LPUART1_SendDec( uint16_t nr ){
 	uint8_t data[6]={'0',0,0,0,0,0};
 	uint8_t index=0;
@@ -267,17 +289,6 @@ void LPUART1_SendDec( uint16_t nr ){
 void LPUART1_SendCRLF(){
 	uint8_t data[2]={'\r','\n'};
 	LPUART1_SendArray(data,2);
-}
-
-void LPUART1_Check_Circular(void){
-    if( (LPUART1->ISR & USART_ISR_TXE) == USART_ISR_TXE){// Bit set, so TDR is empty
-    	if( outStart != outEnd ){
-    		LPUART1->TDR = *outStart++; // This also clears the complete flag
-    		if (outStart == outTail) { // So never write on the tail!
-    			outStart = outHead;    // End reached, back to head
-    		}
-    	}
-    }
 }
 void LPUART1_Transfer_Buffer( void ){
     uint8_t rec[16];
@@ -310,16 +321,17 @@ void LPUART1_IRQHandler(void){
     uint8_t ok = 0x00;
 
     // Check if interrupt is due to transmit complete
-    if((LPUART1->ISR & USART_ISR_TC) == USART_ISR_TC){
-    	 if( outStart != outEnd ){ // meaning still data to send
-    		 LPUART1->TDR = *outStart++; // This also clears the complete flag
-    		 if (outStart == outTail) { // So never write on the tail!
+    if( LPUART1->ISR & (USART_ISR_TC|USART_ISR_TXE) ){
+    	if( outStart != outEnd ){ // meaning still data to send
+			 LPUART1->TDR = *outStart++; // This also clears the complete flag
+			 free++;
+			 if (outStart == outTail) { // So never write on the tail!
 				 outStart = outHead;    // End reached, back to head
 			 }
-    	 }else{
-    		 LPUART1->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
-    	 }
-    	 ok=0x01;
+		 }else{ // No more data to send, just clear the flag
+			 LPUART1->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
+		 }
+		 ok=0x01;
     }
     if((LPUART1->ISR & USART_ISR_RXNE) == USART_ISR_RXNE){ // ISR for received data
         recChar = (uint8_t)(LPUART1->RDR); /* Receive data, clear flag */
