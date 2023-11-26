@@ -121,7 +121,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_TXE) == 0){  // Wait till transfer buffer is empty
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT;
+			return ERROR_I2C_NO_TXE_EMTPY;
 		}
 	}
 	I2C1 ->TXDR = reg;  		// Load the first byte
@@ -142,7 +142,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	tickstart = Tick;
 	while( (I2C1->ISR & I2C_ISR_TC)==0 ){
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT2;
+			return ERROR_I2C_NO_TC_DETECT;
 		}
 	}
 	// Now the register is set, read the data?
@@ -162,7 +162,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_STOPF) == 0){
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT4;
+			return ERROR_I2C_NO_STOP_DT;
 		}
 	}
 	SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
