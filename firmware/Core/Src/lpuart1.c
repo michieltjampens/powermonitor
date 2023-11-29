@@ -5,7 +5,8 @@
 
 /* Shared variables ----------------------------------------------------------*/
 __IO uint8_t cmdReady;
-uint8_t free = CIRCULAR-1;
+uint8_t freeSpace = CIRCULAR-1;
+uint8_t irqStatus=IDLE;
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -34,7 +35,7 @@ void LPUART1_Configure(){
     inputTail =  &inputBuffer[64-1];
 
     outStart = &outputBuffer[0];
-    outEnd =   &outputBuffer[0];
+    outEnd  =   &outputBuffer[0];
     outHead =  &outputBuffer[0];
     outTail =  &outputBuffer[CIRCULAR-1];
 
@@ -71,7 +72,7 @@ void LPUART1_Configure_Setup(void){
     /* System clock is 16MHz (1MHz oversampling by 16), 19200 baud (both already divided by 100) */
     LPUART1->BRR = (256*160000)/192;//19200??
 
-    LPUART1->CR2 |= USART_CR2_SWAP; /* Swap RX and TX this needs to be set before CR1_UE is set*/
+    LPUART1->CR2 |= USART_CR2_SWAP; /* Swap RX and TX this needs to be set before CR1_UE is set */
 
     /* 8 data bit, 1 start bit, 1 stop bit, no parity */
     LPUART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
@@ -100,7 +101,30 @@ void LPUART1_Configure_Setup(void){
 	NVIC_EnableIRQ(LPUART1_IRQn);
 }
 
-void writeByte( uint8_t data ){
+void LPUART1_writeByte( uint8_t data ){
+	if( irqStatus & IDLE ){// Meaning buffer not in use
+		irqStatus = BUSY;  // Show that it's in use now
+		if( outEnd==outStart ){ // Buffer is empty
+			LPUART1->TDR = data; // Write the byte
+			return; // Finished here
+		}else{ // Buffer isn't empty but the irq is in idle so TXE empty, get it to work
+			LPUART1->TDR = *outStart++;
+			if (outStart == outTail) {  // So never write on the tail!
+				outStart = outHead;     // End reached, back to head
+			}
+		}
+	}
+	// At this point the irq is busy with 'something'
+	if( outEnd+1 == outStart || (outStart==outHead && outEnd+1==outTail )){
+		// Getting in here means that adding a byte would overflow the buffer, so wait a bit
+		irqStatus |= WAITING; // Put up the flag that we are waiting for a byte to transfer
+		while( irqStatus & WAITING );
+	}
+	*outEnd++ = data;
+	if (outEnd == outTail) // So never write on the tail!
+		outEnd = outHead;  // End reached, back to head
+
+	/*
 	if( free == CIRCULAR-1 ){ // So buffer not in use
 		if( (LPUART1->ISR & USART_ISR_TXE) == USART_ISR_TXE){// Bit set, so TDR is empty send it directly
 			LPUART1->TDR = data;
@@ -120,7 +144,7 @@ void writeByte( uint8_t data ){
 	*outEnd++ = data;
 	if (outEnd == outTail) // So never write on the tail!
 		outEnd = outHead;  // End reached, back to head
-
+	*/
 }
 /**
  * Brief Send elements from an array in the send buffer till a 0x00 is found
@@ -129,12 +153,11 @@ void writeByte( uint8_t data ){
  * RetVal
  * 		None
  */
-void LPUART1_SendBytes( uint8_t *buffer ){
+void LPUART1_writeText( const char *buffer ){
     while( *buffer != 0x00){
-        writeByte(*buffer++);
+    	LPUART1_writeByte(*buffer++);
     }
 }
-
 /**
  * Brief Send the given amount of elements from an array
  * Param
@@ -143,41 +166,30 @@ void LPUART1_SendBytes( uint8_t *buffer ){
  * RetVal
  * 		None
  */
-void LPUART1_SendArray( uint8_t *buffer, uint8_t length ){
+void LPUART1_writeByteArray( uint8_t *buffer, uint8_t length ){
     while( length != 0x00){
-    	writeByte(*buffer++);
+    	LPUART1_writeByte(*buffer++);
         length--;
     }
+}
+void LPUART1_writeNullEndedArray( uint8_t *buffer ){
+    while( *buffer != 0x00 )
+    	LPUART1_writeByte(*buffer++);
 }
 void LPUART1_SendArrayReversed( uint8_t *buffer, uint8_t length ){
-	buffer= buffer+length-1;
+	buffer = buffer+length-1; // point to the end instead of the start
     while( length != 0x00){
-    	writeByte(*buffer--);
+    	LPUART1_writeByte(*buffer--);
         length--;
     }
 }
-/**
- * Brief Send a single byte of data
- * Param
- * 		data -> The byte to send
- */
-void LPUART1_SendByte( uint8_t data ){
-    LPUART1_SendArray(&data,1);
-}
-/**
- * Brief Send a string
- * Param
- * 		buffer -> The string to send (fe."foobar")
- */
-void LPUART1_SendString( const char *buffer ){
-	LPUART1_SendBytes( (uint8_t*) buffer);
-}
+
 /**
  * Brief Convert a 16bit number to hex ascii and send it
  * Param
  * 		nr -> The number to send
  */
-void LPUART1_SendHex( uint16_t nr ){
+void LPUART1_writeHexWord( uint16_t nr ){
 	uint8_t data[7]={'0','x','0','0',0,0,0};
 	uint8_t tmp;
 	uint8_t index=5;
@@ -195,9 +207,9 @@ void LPUART1_SendHex( uint16_t nr ){
 		nr /= 16;
 		index --;
 	}
-	LPUART1_SendBytes(data);
+	LPUART1_writeNullEndedArray(data);
 }
-void LPUART1_Send32bitHex( uint32_t nr ){
+void LPUART1_writeHexQuad( uint32_t nr ){
 	uint8_t data[11]={'0','x','0','0','0','0','0','0','0','0',0};
 	uint8_t tmp;
 	uint8_t index=9;
@@ -212,9 +224,9 @@ void LPUART1_Send32bitHex( uint32_t nr ){
 		nr /= 16;
 		index --;
 	}
-	LPUART1_SendBytes(data);
+	LPUART1_writeNullEndedArray(data);
 }
-void LPUART1_SendWordHexNoPrefix( uint16_t nr ){
+void LPUART1_writeHexWordNoPrefix( uint16_t nr ){
 	uint8_t data[5]={'0','0','0','0',0};
 	uint8_t tmp;
 	uint8_t index=3;
@@ -229,52 +241,51 @@ void LPUART1_SendWordHexNoPrefix( uint16_t nr ){
 		nr /= 16;
 		index --;
 	}
-	LPUART1_SendBytes(data);
+	LPUART1_writeNullEndedArray(data);
 }
-void LPUART1_SendByteHexNoPrefix( uint8_t nr ){
-	uint8_t data[5]={'0','0',0};
+void LPUART1_writeHexByteNoPrefix( uint8_t nr ){
 	uint8_t tmp;
 
 	tmp = nr%16;
 	if(tmp>9){
-		data[1]= tmp+55;
+		tmp = tmp + 55;
 	}else{
-		data[1] = tmp + '0';
+		tmp = tmp + '0';
 	}
 
 	nr /= 16;
 	if(nr>9){
-		data[0]= nr+55;
+		LPUART1_writeByte( nr+55); // 65 is ascii value of A
 	}else{
-		data[0] = nr + '0';
+		LPUART1_writeByte( nr + '0');
 	}
-	LPUART1_SendBytes(data);
+	LPUART1_writeByte(tmp);
 }
-void LPUART1_SendBytesHexNoPrefix( uint8_t *nrs, uint8_t length ){
+void LPUART1_writeHexByteArrayNoPrefix( uint8_t *nrs, uint8_t length ){
 	uint8_t tmp;
 
 	while( length != 0x00){
 		tmp = *nrs/16;
 		if(tmp>9){
-			writeByte(tmp+55);
+			LPUART1_writeByte(tmp+55);
 		}else{
-			writeByte(tmp + '0');
+			LPUART1_writeByte(tmp + '0');
 		}
 		tmp = *nrs%16;
 		if(tmp>9){
-			writeByte(tmp+55);
+			LPUART1_writeByte(tmp+55);
 		}else{
-			writeByte(tmp + '0');
+			LPUART1_writeByte(tmp + '0');
 		}
         nrs++;
         length--;
     }
 }
-void LPUART1_SendDec( uint16_t nr ){
+void LPUART1_writeDec( uint16_t nr ){
 	uint8_t data[6]={'0',0,0,0,0,0};
 	uint8_t index=0;
 	if( nr==0 ){
-		LPUART1_SendString("0");
+		LPUART1_writeByte('0');
 	}else{
 		while( nr!=0 ){
 			data[index++]=nr%10+'0';
@@ -282,13 +293,6 @@ void LPUART1_SendDec( uint16_t nr ){
 		}
 		LPUART1_SendArrayReversed(data,index);
 	}
-}
-/**
- * Brief Send Carriage return + linefeed
- */
-void LPUART1_SendCRLF(){
-	uint8_t data[2]={'\r','\n'};
-	LPUART1_SendArray(data,2);
 }
 void LPUART1_Transfer_Buffer( void ){
     uint8_t rec[16];
@@ -318,20 +322,24 @@ void LPUART1_Transfer_Buffer( void ){
 }
 void LPUART1_IRQHandler(void){
     uint8_t recChar = 0;
-    uint8_t ok = 0x00;
+    uint8_t ok = 0x01;
 
     // Check if interrupt is due to transmit complete
-    if( LPUART1->ISR & (USART_ISR_TC|USART_ISR_TXE) ){
+    if( LPUART1->ISR & USART_ISR_TXE ){
     	if( outStart != outEnd ){ // meaning still data to send
 			 LPUART1->TDR = *outStart++; // This also clears the complete flag
-			 free++;
+			 freeSpace++;
+			 irqStatus=BUSY; // Indicate that the irq is working on the buffer
 			 if (outStart == outTail) { // So never write on the tail!
 				 outStart = outHead;    // End reached, back to head
 			 }
 		 }else{ // No more data to send, just clear the flag
 			 LPUART1->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
+			 irqStatus=IDLE;
 		 }
-		 ok=0x01;
+    }
+    if( LPUART1->ISR & USART_ISR_TC ){
+    	LPUART1->ICR = USART_ICR_TCCF; /* Clear transfer complete flag */
     }
     if((LPUART1->ISR & USART_ISR_RXNE) == USART_ISR_RXNE){ // ISR for received data
         recChar = (uint8_t)(LPUART1->RDR); /* Receive data, clear flag */
@@ -348,7 +356,6 @@ void LPUART1_IRQHandler(void){
         }
         // Can't echo inside the ISR! because the processor doesn't process fast enough?
         //LPUART1_SendByte(recChar); // This gives issues
-        ok=0x02;
     }
     if( ok==0x00 ){ // Meaning ISR was for unknown reason
         error = ERROR_USART_TRANSMIT; /* Report an error */
