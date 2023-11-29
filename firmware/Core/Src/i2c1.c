@@ -7,11 +7,14 @@
 
 /* Private variables ---------------------------------------------------------*/
 uint8_t * i2c_txBuffer;
-uint8_t * i2c_rxBuffer_8bit;
-uint16_t * i2c_rxBuffer_16bit;
+
+uint8_t * i2c_rxBuffer_8bit; // Pointer to 8bit receiving buffer
+uint8_t * i2c_rxBuffer_8bit_END;  // Points to the end of the 8bit buffer
+uint16_t * i2c_rxBuffer_16bit; // Pointer to 16bit receiving buffer
+uint16_t * i2c_rxBuffer_16bit_END; // Points to the end of the 16bit buffer
+
 uint8_t bits=0x00;
-uint8_t rec=0x00;
-uint16_t test=0;
+uint8_t toReceive=0x00;
 /* *********************************** S E T U P *************************************************** */
 /**
  * Brief Init the I2C1 peripheral and the used GPIO's
@@ -66,22 +69,23 @@ uint8_t I2C1_SendData( uint8_t i2c_Address, uint8_t length, uint8_t *data){
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_BUSY) == 0 ){ // Wait till busy flag is raised
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT;
+			return ERROR_I2C_NO_BUSY_FLAG;
 		}
 	}
 	///Then check when BUSY flags gets cleared (STOP detected), 10ms max
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_STOPF) == 0){
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT;
+			return ERROR_I2C_NO_STOP_DT;
 		}
 	}
 	SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
+
 	if( I2C1->ISR & I2C_ISR_NACKF ){ // Check if NACKF is raised
 		SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Clear it
-		return 0;
+		return ERROR_I2C_NACK;
 	}else{
-		return 1;
+		return I2C_OK;
 	}
 }
 /**
@@ -103,20 +107,22 @@ uint8_t I2C1_SendSingleByte( uint8_t i2c_Address, uint8_t data){
 /* ******************************** R E C E I V I N G ************************************************* */
 uint8_t I2C1_Read16bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint16_t *data){
 	i2c_rxBuffer_16bit = data;
+	i2c_rxBuffer_16bit_END = data+length;
 	length *=2; // Because the bus reads a byte at a time
 	bits=16;
-	rec=0;
+	toReceive=0;
 	return I2C1_ReadData( i2c_Address, reg, length);
 }
 uint8_t I2C1_Read8bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint8_t *data){
 	i2c_rxBuffer_8bit = data;
+	i2c_rxBuffer_8bit_END = data+length;
 	bits=8;
 	return I2C1_ReadData( i2c_Address, reg, length);
 }
 uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	uint32_t tickstart;
 
-	rec=length;
+	toReceive=length;
 
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_TXE) == 0){  // Wait till transfer buffer is empty
@@ -135,7 +141,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_BUSY) == 0 ){ // Wait till busy flag is raised
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT;
+			return ERROR_I2C_NO_BUSY_FLAG;
 		}
 	}
 	///Then check when TC flag gets set (TC detected), 10ms max
@@ -151,28 +157,13 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	I2C1->CR2 = I2C_CR2_AUTOEND | (length<<16) | I2C_CR2_RD_WRN |(i2c_Address<<1);
 	I2C1->CR2 |= I2C_CR2_START; // Send start condition
 
-	///Wait for the START condition detection, maximum 10ms
 	tickstart = Tick;
-	while((I2C1->ISR & I2C_ISR_BUSY) == 0 ){ // Wait till busy flag is raised
+	while(toReceive != 0){ //wait for receiving the data?
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT3;
+			return ERROR_I2C_DATA_REC_DELAY;
 		}
 	}
-	///Then check when BUSY flags gets cleared (STOP detected), 10ms max
 	tickstart = Tick;
-	while((I2C1->ISR & I2C_ISR_STOPF) == 0){
-		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_NO_STOP_DT;
-		}
-	}
-	SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
-
-	tickstart = Tick;
-	while(rec != 0){ //wait for receiving the data?
-		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_TIMEOUT4;
-		}
-	}
 	return I2C_OK;
 }
 
@@ -194,19 +185,27 @@ void I2C1_IRQHandler(void){
 
   if(I2C1->ISR & I2C_ISR_RXNE){ // Receive buffer not empty
 	  if( bits == 8 ){
-		  *i2c_rxBuffer_8bit = I2C1->RXDR;
-		  i2c_rxBuffer_8bit++;
-		  rec--;
-	  }else if( bits == 16 ){
-		  if( rec%2==0 ){
-			  *i2c_rxBuffer_16bit = I2C1->RXDR; /* Read receive register, will clear RXNE flag */
-			  *i2c_rxBuffer_16bit = *i2c_rxBuffer_16bit <<8; //Receiving MSB first, so shift it to msb
+		  if( i2c_rxBuffer_8bit <= i2c_rxBuffer_8bit_END ){
+			  *i2c_rxBuffer_8bit++ = I2C1->RXDR;
+			  toReceive--;
 		  }else{
-			  *i2c_rxBuffer_16bit += I2C1->RXDR; // Add the LSB
-			  i2c_rxBuffer_16bit++; // Increment the pointer
+			  error = ERROR_I2C_OVERFLOW;
 		  }
-		  rec--;
+	  }else if( bits == 16 ){
+		  if( i2c_rxBuffer_16bit <= i2c_rxBuffer_16bit_END ){
+			  if( toReceive%2==0 ){
+				  *i2c_rxBuffer_16bit = I2C1->RXDR; /* Read receive register, will clear RXNE flag */
+				  *i2c_rxBuffer_16bit = *i2c_rxBuffer_16bit <<8; //Receiving MSB first, so shift it to msb
+			  }else{
+				  *i2c_rxBuffer_16bit += I2C1->RXDR; // Add the LSB
+				  i2c_rxBuffer_16bit++; // Increment the pointer
+			  }
+			  toReceive--;
+		  }else{
+			  error = ERROR_I2C_OVERFLOW;
+		  }
 	  }
+
   }else if(I2C1->ISR & I2C_ISR_TXIS){ /*  Ready to send the next byte */
 	  I2C1 ->TXDR = *i2c_txBuffer++; // Put the next byte
   }else if(I2C1->ISR & I2C_ISR_NACKF){ /* NACK Received*/
@@ -214,7 +213,18 @@ void I2C1_IRQHandler(void){
   }else if(I2C1->ISR & I2C_ISR_STOPF){
 	  SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
   }else if(I2C1->ISR & I2C_ISR_TC){ // Transfer complete?
-	  test=0;
+  }else if(I2C1->ISR & I2C_ISR_BERR ){ // misplaced Start or STOP condition
+	  SET_BIT(I2C1->ICR, I2C_ICR_BERRCF);
+	  error=ERROR_I2C_BERR;
+  }else if(I2C1->ISR & I2C_ISR_ARLO ){ // Arbitration lost
+	  SET_BIT(I2C1->ICR, I2C_ICR_ARLOCF);
+	  error=ERROR_I2C_ARLO;
+  }else if(I2C1->ISR & I2C_ISR_PECERR){ // PEC Error in reception
+	  SET_BIT(I2C1->ICR, I2C_ICR_PECCF);
+	  error=ERROR_I2C_PECERR;
+  }else if(I2C1->ISR & I2C_ISR_TIMEOUT){  // Timeout or tLOW detection flag
+	  SET_BIT(I2C1->ICR, I2C_ICR_TIMOUTCF);
+	  error=ERROR_I2C_TIMEOUT;
   }else{
     error = ERROR_I2C; /* Report an error */
     NVIC_DisableIRQ(I2C1_IRQn); /* Disable I2C2_IRQn */
