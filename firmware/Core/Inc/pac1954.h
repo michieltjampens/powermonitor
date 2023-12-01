@@ -38,7 +38,10 @@
 	uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch );
 
 	uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg);
-	/* Sense to position translation */
+
+
+	#define PAC_OK						0x01
+	#define PAC_BAD						0x00
 
 	/* Refresh cmds */
 	#define PAC1954_REFRESH				0x00

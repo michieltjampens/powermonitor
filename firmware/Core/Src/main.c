@@ -48,7 +48,7 @@ int main(void){
 			LPUART1_writeText("\r\n");
 			error=0;
 		}
-		if( check>=20 && pacState==PAC_REFRESHED){ // Minimim of 10ms between refresh and readout
+		if( check>=20 && pacState==PAC_REFRESHED){ // Minimum of 10ms between refresh and readout
 			readAll();
 			check=0; // Reset counter
 		}

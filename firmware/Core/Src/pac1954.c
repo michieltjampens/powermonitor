@@ -11,6 +11,10 @@
 uint8_t address=0x00;
 uint8_t state=0x00;
 
+/**
+ * Try to find the address of the PAC based on a restricted range
+ * return The found address or 0x00 if not found
+ */
 uint8_t PAC1954_findAddress(){
 	uint8_t addr;
 	for( addr=0x10;addr<0x20;addr++){
@@ -25,6 +29,7 @@ uint8_t PAC1954_findAddress(){
  * Read the current value of the voltage and current registers
  * address - the address of the PAC
  * lastVoltCur - the struct that holds the data
+ * return The result of the I2C operation
  */
 uint8_t PAC1954_readVoltageCurrent( uint8_t address, voltcur *lastVoltCur ){
 	uint16_t recBuffer[9];
@@ -43,6 +48,11 @@ uint8_t PAC1954_readVoltageCurrent( uint8_t address, voltcur *lastVoltCur ){
 	}
 	return result;
 }
+/**
+ * Read the content of the Accummulator count of a certain pac
+ * address The address of the pac
+ * returns The count or 0xFFFFFFFF if there was a failure
+ */
 uint32_t PAC1954_readAccCount( uint8_t address ){
 	uint16_t recBuffer[2];
 	if( I2C1_Read16bitData( address, PAC1954_ACC_CNT_REG , 2,recBuffer) == I2C_OK ){
@@ -53,11 +63,19 @@ uint32_t PAC1954_readAccCount( uint8_t address ){
 		return count;
 	}
 	state=0x00;
-	return 0x00;
+	return 0xFFFFFFFF;
 }
+/**
+ * Issue the refreshV command
+ * address  the address of the pac
+ */
 uint8_t PAC1954_doRefreshV( uint8_t address){
-	return I2C1_SendSingleByte(address,PAC1954_REFRESH_V);
+	return I2C1_transmitByte(address,PAC1954_REFRESH_V);
 }
+/**
+ * Request the current state of the PAC connection
+ * return 0x00=bad or 0x01=good
+ */
 uint8_t PAC1954_checkState(){
 	return state;
 }
@@ -68,12 +86,12 @@ uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
 	buffer[1] = limit/0xFF;
 	buffer[2] = limit%0x100;
 
-	//uint32_t alerts = PAC1954_read24bitRegister(address,PAC1954_ALERT_EN_REG); // Read alerts
+	uint32_t alerts = PAC1954_read24bitRegister(address,PAC1954_ALERT_EN_REG); // Read alerts
 
 	// Set the limit
-	state=I2C1_SendData(addr, 3, buffer);
+	state=I2C1_transmitData(addr, 3, buffer); // Works
 	// Enable the alert for it
-	/*
+
 	if( alerts == 0xFFFFFFFF ){
 		return 0; // Failed
 	}
@@ -85,10 +103,13 @@ uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
 	buffer[2]=alerts % 0x100;
 	alerts/=0xFF;
 	buffer[1]=alerts % 0x100;
-	state=I2C1_SendData(addr, 4, buffer); // Send it back?
-*/
+	state=I2C1_transmitData(addr, 4, buffer); // Send it back?
+
 	return state;
 }
+/**
+ * Reads the content of an OV limit register, ch determines with one
+ */
 uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch ){
 	uint16_t recBuffer[2];
 	state=0x00;
@@ -114,6 +135,10 @@ uint32_t PAC1954_readAlertEnable(uint8_t address){
 	return PAC1954_read24bitRegister(address,PAC1954_ALERT_EN_REG);
 }
 /* ************************ U T I L I T Y ************************************************ */
+/**
+ * Method to read the content of a 24bit register of the pac, this writes to a 32bit uint.
+ * return The result of the read or 0xFFFFFFFF (32bit FS)
+ */
 uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg){
 	uint8_t recBuffer[3];
 	state=0;

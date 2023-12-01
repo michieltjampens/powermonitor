@@ -52,7 +52,7 @@ __INLINE void I2C1_Configure_Master(void){
  * 		1 -> Device replied
  * 		x -> Error
  */
-uint8_t I2C1_SendData( uint8_t i2c_Address, uint8_t length, uint8_t *data){
+uint8_t I2C1_transmitData( uint8_t i2c_Address, uint8_t length, uint8_t *data){
 	uint32_t tickstart;
 
 	if( length != 0x00 ){ // No use processing data if length is 0
@@ -89,7 +89,7 @@ uint8_t I2C1_SendData( uint8_t i2c_Address, uint8_t length, uint8_t *data){
 	}
 }
 /**
- * Brief	Send a single byte to the given address
+ * Brief	Transmit a single byte to the given address
  * Param
  *   i2c_Address  - 7bit address (so omit the r/w bit)
  *   data  - pointer to array containing length of bytes
@@ -98,11 +98,11 @@ uint8_t I2C1_SendData( uint8_t i2c_Address, uint8_t length, uint8_t *data){
  *		1 -> Device replied
  * 		x -> Error
  */
-uint8_t I2C1_SendSingleByte( uint8_t i2c_Address, uint8_t data){
+uint8_t I2C1_transmitByte( uint8_t i2c_Address, uint8_t data){
 	if( i2c_Address==0x00)
 		return 0;
 	uint8_t d[1]={data};
-	return I2C1_SendData( i2c_Address,1,d);
+	return I2C1_transmitData( i2c_Address,1,d);
 }
 /* ******************************** R E C E I V I N G ************************************************* */
 uint8_t I2C1_Read16bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint16_t *data){
@@ -151,7 +151,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 			return ERROR_I2C_NO_TC_DETECT;
 		}
 	}
-	// Now the register is set, read the data?
+	// Now the register is set, request the data
 
 	// Enable auto-end, set amount of bytes to receive and the address shifted for R/W bit
 	I2C1->CR2 = I2C_CR2_AUTOEND | (length<<16) | I2C_CR2_RD_WRN |(i2c_Address<<1);
@@ -163,7 +163,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 			return ERROR_I2C_DATA_REC_DELAY;
 		}
 	}
-	tickstart = Tick;
+
 	return I2C_OK;
 }
 
@@ -178,7 +178,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
  * 		x -> Error
  */
 uint8_t I2C1_PokeDevice( uint8_t i2c_Address ){
-	return I2C1_SendData( i2c_Address,0x00,0x00);
+	return I2C1_transmitData( i2c_Address,0x00,0x00);
 }
 /* *************************************** I R Q **************************************************** */
 void I2C1_IRQHandler(void){

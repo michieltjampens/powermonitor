@@ -18,8 +18,8 @@ extern __IO uint16_t error;
 
 /* Exported functions prototypes ---------------------------------------------*/
 void I2C1_Configure_Master(void);
-uint8_t I2C1_SendData( uint8_t addr, uint8_t length, uint8_t *data);
-uint8_t I2C1_SendSingleByte( uint8_t addr, uint8_t data);
+uint8_t I2C1_transmitData( uint8_t addr, uint8_t length, uint8_t *data);
+uint8_t I2C1_transmitByte( uint8_t addr, uint8_t data);
 /* Reading */
 uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length);
 uint8_t I2C1_Read8bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint8_t *data);
