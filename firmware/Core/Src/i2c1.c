@@ -15,19 +15,20 @@ uint16_t * i2c_rxBuffer_16bit_END; // Points to the end of the 16bit buffer
 
 uint8_t bits=0x00;
 uint8_t toReceive=0x00;
+uint8_t toSend=0x00;
 /* *********************************** S E T U P *************************************************** */
 /**
  * Brief Init the I2C1 peripheral and the used GPIO's
  */
 __INLINE void I2C1_Configure_Master(void){
 
-  SET_BIT(RCC->APB1ENR,RCC_APB1ENR_I2C1EN); // Enable the peripheral clock I2C1 do this before GPIO's
-
   /* GPIO Setup, PB6=SCL and PB7=SDA */
   SET_BIT(RCC->IOPENR,RCC_IOPENR_GPIOBEN);  // Enable the peripheral clock of GPIOA
   MODIFY_REG(GPIOB->MODER, GPIO_MODER_MODE6|GPIO_MODER_MODE7, GPIO_MODER_MODE6_1|GPIO_MODER_MODE7_1); //Use AF
   GPIOB->AFR[0] = (GPIOB->AFR[0] &~ (0x00000FF0)) | (1 << (6 * 4)) | (1 << (7 * 4)); // Pick AF1 (I2C1)
   GPIOB->OTYPER |= GPIO_OTYPER_OT_6 | GPIO_OTYPER_OT_7; // Open drain
+
+  SET_BIT(RCC->APB1ENR,RCC_APB1ENR_I2C1EN); // Enable the peripheral clock I2C1 do this before GPIO's
 
   /* Configure I2C1 as master */
   I2C1->TIMINGR = (uint32_t)0x00503D5A; // Timing setup: 100kHz mode, PCLK=16MHz, rise=100ns,fall=10ns (STM32CubeMX calculated)
@@ -44,7 +45,7 @@ __INLINE void I2C1_Configure_Master(void){
 /**
  * Brief	Send data to a device on the bus
  * Param
- *   i2c_Address  - 7bit address (so omit the r/w bit)
+ *   address  - 7bit address (so omit the r/w bit)
  *   length - the amount of bytes to send
  *   data  - pointer to array containing length of bytes
  * Retval
@@ -52,37 +53,52 @@ __INLINE void I2C1_Configure_Master(void){
  * 		1 -> Device replied
  * 		x -> Error
  */
-uint8_t I2C1_transmitData( uint8_t i2c_Address, uint8_t length, uint8_t *data){
+uint8_t I2C1_transmitData( uint8_t address, uint8_t length, uint8_t *data){
 	uint32_t tickstart;
 
-	if( length != 0x00 ){ // No use processing data if length is 0
-		while((I2C1->ISR & I2C_ISR_TXE) == 0);  // Wait till transfer buffer is empty
-		i2c_txBuffer = data;					// Copy the address of the data
-		I2C1 ->TXDR = *i2c_txBuffer++;  		// Load the first byte
+	toSend=length;
+
+	i2c_txBuffer = data;	// Do this before start otherwise might be to late...
+
+	I2C1->CR2 = I2C_CR2_AUTOEND | (length << I2C_CR2_NBYTES_Pos) | (address << 1);
+
+	if( I2C1_start() != I2C_OK ) // If Start failed, give up
+		return ERROR_I2C_NACK;
+
+	if( length == 0 ){
+		return I2C_OK;
 	}
+
+	tickstart = Tick;
+	while( toSend != 0 ){
+		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
+			return ERROR_I2C_NO_TXE_EMTPY;
+		}
+	}
+
+	return I2C_OK;
+}
+uint8_t I2C1_start(){
+	uint32_t tickstart;
 	// Enable auto-end, set amount of bytes to send and the address shifted for R/W bit
-	I2C1->CR2 = I2C_CR2_AUTOEND | (length << I2C_CR2_NBYTES_Pos) | (i2c_Address << 1);
 
-	I2C1->CR2 |= I2C_CR2_START; // Send start condition
+	I2C1->CR2 |= I2C_CR2_START;
 
-	///Wait for the START condition detection, maximum 10ms
 	tickstart = Tick;
-	while((I2C1->ISR & I2C_ISR_BUSY) == 0 ){ // Wait till busy flag is raised
+	while ((I2C1->CR2 & I2C_CR2_START)==0) { // Wait for start
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_NO_BUSY_FLAG;
+			return ERROR_I2C_NO_TXE_EMTPY;
 		}
 	}
-	///Then check when BUSY flags gets cleared (STOP detected), 10ms max
 	tickstart = Tick;
-	while((I2C1->ISR & I2C_ISR_STOPF) == 0){
+	while ((I2C1->CR2 & I2C_CR2_START)==I2C_CR2_START) { // Wait for start to go down
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_NO_STOP_DT;
+			return ERROR_I2C_NO_TXE_EMTPY;
 		}
 	}
-	SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
-
-	if( I2C1->ISR & I2C_ISR_NACKF ){ // Check if NACKF is raised
+	if( I2C1->ISR & I2C_ISR_NACKF ){ // Check if NACKF is raised, if so that's not good
 		SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Clear it
+		SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear it
 		return ERROR_I2C_NACK;
 	}else{
 		return I2C_OK;
@@ -105,45 +121,70 @@ uint8_t I2C1_transmitByte( uint8_t i2c_Address, uint8_t data){
 	return I2C1_transmitData( i2c_Address,1,d);
 }
 /* ******************************** R E C E I V I N G ************************************************* */
+/**
+ * Block read, starting at a certain register and write to uint16_t buffer
+ * Param
+ * 	i2c_Address The 7bit address of the device
+ * 	reg 		The address of the register to start at
+ * 	length 		The amount of bytes to read
+ * 	data 		Pointer to the buffer to write the received data to
+ * RetVal
+ *  I2C_OK(0x01) if no issues were encountered
+ *  Other value if so (see i2c.h for options)
+ */
 uint8_t I2C1_Read16bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint16_t *data){
 	i2c_rxBuffer_16bit = data;
 	i2c_rxBuffer_16bit_END = data+length;
 	length *=2; // Because the bus reads a byte at a time
-	bits=16;
-	toReceive=0;
+	bits=16; // Set this to 16 so the IRQ knows if it writes to uint8_t or uint16_t
 	return I2C1_ReadData( i2c_Address, reg, length);
 }
+/**
+ * Block read, starting at a certain register and write to uint8_t buffer
+ * Param
+ * 	i2c_Address The 7bit address of the device
+ * 	reg 		The address of the register to start at
+ * 	length 		The amount of bytes to read
+ * 	data 		Pointer to the buffer to write the received data to
+ * RetVal
+ *  I2C_OK(0x01) if no issues were encountered
+ *  Other value if so (see i2c.h for options)
+ */
 uint8_t I2C1_Read8bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint8_t *data){
 	i2c_rxBuffer_8bit = data;
 	i2c_rxBuffer_8bit_END = data+length;
-	bits=8;
+	bits=8; // Set this to 8 so the IRQ knows if it writes to uint8_t or uint16_t
 	return I2C1_ReadData( i2c_Address, reg, length);
 }
+/**
+ * Block read starting at a certain register
+ * Param
+ * 	i2c_Address 	The 7bit address of the device
+ * 	reg 			The address of the register to start at
+ * 	length 		The amount of bytes to read
+ * RetVal
+ *  I2C_OK(0x01) if no issues were encountered
+ *  Other value if so (see i2c.h for options)
+ */
 uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	uint32_t tickstart;
 
-	toReceive=length;
+	toReceive = length; // Store the expected length, will be decreased in the irq
 
 	tickstart = Tick;
 	while((I2C1->ISR & I2C_ISR_TXE) == 0){  // Wait till transfer buffer is empty
-		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
+		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){ // If timeout passed
 			return ERROR_I2C_NO_TXE_EMTPY;
 		}
 	}
-	I2C1 ->TXDR = reg;  		// Load the first byte
+	I2C1->TXDR = reg;  		// Load the first byte
 
 	// No auto-end, set amount of bytes to send and the address shifted for R/W bit
 	I2C1->CR2 = (1 << I2C_CR2_NBYTES_Pos) | (i2c_Address << 1);
 
-	I2C1->CR2 |= I2C_CR2_START; // Send start condition
+	if( I2C1_start() != I2C_OK ) // If Start failed, give up
+		return ERROR_I2C_NACK;
 
-	///Wait for the START condition detection, maximum 10ms
-	tickstart = Tick;
-	while((I2C1->ISR & I2C_ISR_BUSY) == 0 ){ // Wait till busy flag is raised
-		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
-			return ERROR_I2C_NO_BUSY_FLAG;
-		}
-	}
 	///Then check when TC flag gets set (TC detected), 10ms max
 	tickstart = Tick;
 	while( (I2C1->ISR & I2C_ISR_TC)==0 ){
@@ -157,13 +198,14 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 	I2C1->CR2 = I2C_CR2_AUTOEND | (length<<16) | I2C_CR2_RD_WRN |(i2c_Address<<1);
 	I2C1->CR2 |= I2C_CR2_START; // Send start condition
 
+	// Now wait till all the data was received...
+	// This probably should be doable with ISR but for some reason STOPF is unreliable
 	tickstart = Tick;
 	while(toReceive != 0){ //wait for receiving the data?
 		if ((Tick - tickstart ) > I2C_TIMEOUT_VALUE){
 			return ERROR_I2C_DATA_REC_DELAY;
 		}
 	}
-
 	return I2C_OK;
 }
 
@@ -208,11 +250,13 @@ void I2C1_IRQHandler(void){
 
   }else if(I2C1->ISR & I2C_ISR_TXIS){ /*  Ready to send the next byte */
 	  I2C1 ->TXDR = *i2c_txBuffer++; // Put the next byte
+	  toSend--;
   }else if(I2C1->ISR & I2C_ISR_NACKF){ /* NACK Received*/
 	  SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Clear flag
   }else if(I2C1->ISR & I2C_ISR_STOPF){
 	  SET_BIT(I2C1->ICR, I2C_ICR_STOPCF); // Clear flag
   }else if(I2C1->ISR & I2C_ISR_TC){ // Transfer complete?
+
   }else if(I2C1->ISR & I2C_ISR_BERR ){ // misplaced Start or STOP condition
 	  SET_BIT(I2C1->ICR, I2C_ICR_BERRCF);
 	  error=ERROR_I2C_BERR;
