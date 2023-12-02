@@ -80,47 +80,84 @@ uint8_t PAC1954_checkState(){
 	return state;
 }
 /* ********************************* L I M I T S ****************************************** */
-uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+uint8_t PAC1954_clearAlertEnable(uint8_t addr){
 	uint8_t buffer[4];
-	buffer[0] = PAC1954_OV_LMTN_1_REG+(chn-1); // Address of the register
+	buffer[0] = PAC1954_ALERT_EN_REG;
+	buffer[1] = 0x00;
+	buffer[2] = 0x00;
+	buffer[3] = 0x00;
+	return I2C1_transmitData(addr, 4, buffer);
+}
+uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+	return PAC1954_setLimit(addr,chn,limit,PAC1954_OV_LMTN_1_REG,PAC_OV_ALERT_EN_CH1);
+}
+uint8_t PAC1954_setUVLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+	return PAC1954_setLimit(addr,chn,limit,PAC1954_UV_LMTN_1_REG,PAC_UV_ALERT_EN_CH1);
+}
+uint8_t PAC1954_setOCLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+	return PAC1954_setLimit(addr,chn,limit,PAC1954_OC_LMTN_1_REG,PAC_OC_ALERT_EN_CH1);
+}
+uint8_t PAC1954_setUCLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+	return PAC1954_setLimit(addr,chn,limit,PAC1954_UC_LMTN_1_REG,PAC_UC_ALERT_EN_CH1);
+}
+uint8_t PAC1954_setOPLimit( uint8_t addr, uint8_t chn, uint16_t limit ){
+	return PAC1954_setLimit(addr,chn,limit,PAC1954_OP_LMTN_1_REG,PAC_OP_ALERT_EN_CH1);
+}
+uint8_t PAC1954_setLimit( uint8_t addr, uint8_t chn, uint16_t limit,uint8_t limitReg, uint32_t enableVal ){
+	uint8_t buffer[4];
+	buffer[0] = limitReg+(chn-1); // Address of the register
 	buffer[1] = limit/0xFF;
 	buffer[2] = limit%0x100;
 
-	uint32_t alerts = PAC1954_read24bitRegister(address,PAC1954_ALERT_EN_REG); // Read alerts
-
-	// Set the limit
-	state=I2C1_transmitData(addr, 3, buffer); // Works
-	// Enable the alert for it
+	uint32_t alerts = PAC1954_read24bitRegister(addr,PAC1954_ALERT_EN_REG); // Read alerts
 
 	if( alerts == 0xFFFFFFFF ){
 		return 0; // Failed
 	}
-	alerts |= (PAC_OV_ALERT_EN_CH1>>(chn-1)); // Alter it
 
-	buffer[0] = PAC1954_ALERT_EN_REG;
+	// Set the limit
+	state=I2C1_transmitData(addr, 3, buffer);
+	if( state != I2C_OK )
+		return state;
+
+	// Enable the alert for it
+	alerts |= (enableVal>>(chn-1)); // Alter it
+
+	buffer[0] = PAC1954_ALERT_EN_REG; // First byte is the register address
 	buffer[3]=alerts % 0x100;
-	alerts/=0xFF;
+	alerts /= 0x100;
 	buffer[2]=alerts % 0x100;
-	alerts/=0xFF;
+	alerts /= 0x100;
 	buffer[1]=alerts % 0x100;
-	state=I2C1_transmitData(addr, 4, buffer); // Send it back?
-
-	return state;
+	return I2C1_transmitData(addr, 4, buffer); // Send it back?
 }
 /**
  * Reads the content of an OV limit register, ch determines with one
  */
 uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch ){
+	return PAC1954_readlimitReg(address,ch,PAC1954_OV_LMTN_1_REG);
+}
+uint16_t PAC1954_readUVlimit( uint8_t address, uint8_t ch ){
+	return PAC1954_readlimitReg(address,ch,PAC1954_UV_LMTN_1_REG);
+}
+uint16_t PAC1954_readUClimit( uint8_t address, uint8_t ch ){
+	return PAC1954_readlimitReg(address,ch,PAC1954_UC_LMTN_1_REG);
+}
+uint16_t PAC1954_readOClimit( uint8_t address, uint8_t ch ){
+	return PAC1954_readlimitReg(address,ch,PAC1954_OC_LMTN_1_REG);
+}
+uint16_t PAC1954_readOPlimit( uint8_t address, uint8_t ch ){
+	return PAC1954_readlimitReg(address,ch,PAC1954_OP_LMTN_1_REG);
+}
+uint16_t PAC1954_readlimitReg( uint8_t address, uint8_t ch, uint8_t reg ){
 	uint16_t recBuffer[2];
 	state=0x00;
-	if( I2C1_Read16bitData( address, PAC1954_OV_LMTN_1_REG+(ch-1) , 1,recBuffer) == I2C_OK ){
+	if( I2C1_Read16bitData( address, reg+(ch-1) , 1,recBuffer) == I2C_OK ){
 		state=0x01;
 		return recBuffer[0];
 	}
-
 	return 0x00;
 }
-
 /* ********************************* A L E R T ******************************************** */
 /**
  * Reads the current value of the alert status register return 0xFFFFFFFF if failed
@@ -146,9 +183,9 @@ uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg){
 	if( res == I2C_OK ){
 		state=1;
 		uint32_t status = recBuffer[0];
-		status *= 0x10000;
+		status *= 0x100;
 		status += recBuffer[1];
-		status *= 0x10000;
+		status *= 0x100;
 		status += recBuffer[2];
 		return status;
 	}

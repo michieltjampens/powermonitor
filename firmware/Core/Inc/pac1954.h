@@ -30,13 +30,26 @@
 	uint32_t PAC1954_readAccCount( uint8_t address ); // Read the content of the accumulator counter register
 	uint8_t PAC1954_doRefreshV( uint8_t address);
 	uint8_t PAC1954_checkState(void);
+
 	// Alerts
 	uint32_t PAC1954_readAlertStatus(uint8_t address);
 	uint32_t PAC1954_readAlertEnable(uint8_t address);
-	// Limits
-	uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit );
-	uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch );
+	uint8_t PAC1954_clearAlertEnable(uint8_t addr);
 
+	// Set Limits
+	uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit );
+	uint8_t PAC1954_setUVLimit( uint8_t addr, uint8_t chn, uint16_t limit );
+	uint8_t PAC1954_setOCLimit( uint8_t addr, uint8_t chn, uint16_t limit );
+	uint8_t PAC1954_setUCLimit( uint8_t addr, uint8_t chn, uint16_t limit );
+	uint8_t PAC1954_setOPLimit( uint8_t addr, uint8_t chn, uint16_t limit );
+	uint8_t PAC1954_setLimit( uint8_t addr, uint8_t chn, uint16_t limit,uint8_t limitReg, uint32_t enableVal );
+	// Read limits
+	uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch );
+	uint16_t PAC1954_readUVlimit( uint8_t address, uint8_t ch );
+	uint16_t PAC1954_readOClimit( uint8_t address, uint8_t ch );
+	uint16_t PAC1954_readUClimit( uint8_t address, uint8_t ch );
+	uint16_t PAC1954_readOPlimit( uint8_t address, uint8_t ch );
+	uint16_t PAC1954_readlimitReg( uint8_t address, uint8_t ch, uint8_t reg );
 	uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg);
 
 
@@ -101,19 +114,29 @@
 
 
 	/* ALERT ENABLE MACRO'S */
-	#define PAC_OV_ALERT_EN_CH1		0x008000  // bit 15 set
-	#define PAC_OV_ALERT_EN_CH2		0x004000  // bit 14 set
-	#define PAC_OV_ALERT_EN_CH3		0x002000  // bit 13 set
-	#define PAC_OV_ALERT_EN_CH4		0x001000  // bit 12 set
+	#define PAC_OC_ALERT_EN_CH1		0x00800000  // bit 23 set
+	#define PAC_OC_ALERT_EN_CH2		0x00400000  // bit 22 set
+	#define PAC_OC_ALERT_EN_CH3		0x00200000  // bit 21 set
+	#define PAC_OC_ALERT_EN_CH4		0x00100000  // bit 20 set
 
-	#define PAC_UV_ALERT_EN_CH1		0x000800  // bit 11 set
-	#define PAC_UV_ALERT_EN_CH2		0x000400  // bit 10 set
-	#define PAC_UV_ALERT_EN_CH3		0x000200  // bit  9 set
-	#define PAC_UV_ALERT_EN_CH4		0x000100  // bit  8 set
+	#define PAC_UC_ALERT_EN_CH1		0x00080000  // bit 19 set
+	#define PAC_UC_ALERT_EN_CH2		0x00040000  // bit 18 set
+	#define PAC_UC_ALERT_EN_CH3		0x00020000  // bit 17 set
+	#define PAC_UC_ALERT_EN_CH4		0x00010000  // bit 16 set
 
-	#define PAC_OP_ALERT_EN_CH1		0x000080  // bit 7 set
-	#define PAC_OP_ALERT_EN_CH2		0x000040  // bit 6 set
-	#define PAC_OP_ALERT_EN_CH3		0x000020  // bit 5 set
-	#define PAC_OP_ALERT_EN_CH4		0x000010  // bit 4 set
+	#define PAC_OV_ALERT_EN_CH1		0x00008000  // bit 15 set
+	#define PAC_OV_ALERT_EN_CH2		0x00004000  // bit 14 set
+	#define PAC_OV_ALERT_EN_CH3		0x00002000  // bit 13 set
+	#define PAC_OV_ALERT_EN_CH4		0x00001000  // bit 12 set
+
+	#define PAC_UV_ALERT_EN_CH1		0x00000800  // bit 11 set
+	#define PAC_UV_ALERT_EN_CH2		0x00000400  // bit 10 set
+	#define PAC_UV_ALERT_EN_CH3		0x00000200  // bit  9 set
+	#define PAC_UV_ALERT_EN_CH4		0x00000100  // bit  8 set
+
+	#define PAC_OP_ALERT_EN_CH1		0x00000080  // bit 7 set
+	#define PAC_OP_ALERT_EN_CH2		0x00000040  // bit 6 set
+	#define PAC_OP_ALERT_EN_CH3		0x00000020  // bit 5 set
+	#define PAC_OP_ALERT_EN_CH4		0x00000010  // bit 4 set
 
 #endif /* INC_PAC1954_H_ */
