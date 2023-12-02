@@ -37,11 +37,16 @@ void executeCommand( uint8_t * cmd );
 
 // PAC1954
 void readAll(void);
-void sendPAC_VC_Data(void);
+void readVCdata(void);
 void readAccumulator( uint8_t acc );
 void readAlertStatus(void);
 void readAlertEnable(void);
 void readOVLimits(void);
+void readUVLimits(void);
+void readOCLimits(void);
+void readUCLimits(void);
+void readOPLimits(void);
+
 void I2C1_FindDevices(void);
 uint8_t I2C1_FindPAC1954(void);
 void printI2Cerror(uint8_t error);
