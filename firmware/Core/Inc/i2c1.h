@@ -7,7 +7,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "./stm32l0xx.h"
 /* Private includes ----------------------------------------------------------*/
-#include "hardware.h"
+
 /* Shared Variables ------------------------------------------------------------*/
 extern __IO uint32_t Tick;
 extern __IO uint16_t error;
@@ -28,7 +28,6 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length);
 uint8_t I2C1_Read8bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint8_t *data);
 uint8_t I2C1_Read16bitData( uint8_t i2c_Address, uint8_t reg, uint8_t length, uint16_t *data);
 /* Other */
-void I2C1_FindDevices(void);
 uint8_t I2C1_PokeDevice( uint8_t i2c_Address );
 void I2C1_IRQHandler(void);
 
