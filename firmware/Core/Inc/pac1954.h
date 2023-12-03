@@ -10,23 +10,39 @@
 
 #include "i2c1.h"
 
-
+	#define PAC_CHANNELS	0x04
 	/* Exported types ------------------------------------------------------------*/
+	/* Structure to store the settings in nv memory */
+	/* For EEPROM in STM it needs to be a multiple of 4 byte to store the whole struct*/
+	typedef struct {
+
+		/* Other 8byte*/
+		uint16_t overcurrentTime;
+		uint32_t alerts_enable;
+		uint8_t  pacAddress;
+		uint8_t  spare; // Because the amount of bytes needs to be a multiple of 4
+
+		// Total: 8byte
+	} PacSettings;
 
 	typedef struct {
-		uint16_t out1_voltage;
-		uint16_t out2_current;
-		uint16_t out3_voltage;
-		uint16_t out4_voltage;
+		/* Chn settings 12byte */
+		uint16_t UV_lim;
+		uint16_t OV_lim;
+		uint16_t UC_lim;
+		uint16_t OC_lim;
+		uint16_t OP_lim;
+		uint8_t pacAddress;
+		uint8_t spare;
+	} PacChannel;
 
-		uint16_t out1_current;
-		uint16_t out2_voltage;
-		uint16_t out3_current;
-		uint16_t out4_current;
-	} voltcur;
+	typedef struct {
+		uint16_t voltage;
+		uint16_t current;
+	} VoltageCurrent;
 
 	uint8_t PAC1954_findAddress(void);
-	uint8_t PAC1954_readVoltageCurrent( uint8_t address, voltcur *lastVoltCur );
+	uint8_t PAC1954_readVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur );
 	uint32_t PAC1954_readAccCount( uint8_t address ); // Read the content of the accumulator counter register
 	uint8_t PAC1954_doRefreshV( uint8_t address);
 	uint8_t PAC1954_checkState(void);
@@ -35,6 +51,8 @@
 	uint32_t PAC1954_readAlertStatus(uint8_t address);
 	uint32_t PAC1954_readAlertEnable(uint8_t address);
 	uint8_t PAC1954_clearAlertEnable(uint8_t addr);
+	uint8_t PAC1954_enableAlerts( uint8_t addr,uint32_t enable_macro );
+	uint8_t PAC1954_disableAlerts( uint8_t addr,uint32_t enable_macro );
 
 	// Set Limits
 	uint8_t PAC1954_setOVLimit( uint8_t addr, uint8_t chn, uint16_t limit );
@@ -43,15 +61,17 @@
 	uint8_t PAC1954_setUCLimit( uint8_t addr, uint8_t chn, uint16_t limit );
 	uint8_t PAC1954_setOPLimit( uint8_t addr, uint8_t chn, uint16_t limit );
 	uint8_t PAC1954_setLimit( uint8_t addr, uint8_t chn, uint16_t limit,uint8_t limitReg, uint32_t enableVal );
+
 	// Read limits
 	uint16_t PAC1954_readOVlimit( uint8_t address, uint8_t ch );
 	uint16_t PAC1954_readUVlimit( uint8_t address, uint8_t ch );
 	uint16_t PAC1954_readOClimit( uint8_t address, uint8_t ch );
 	uint16_t PAC1954_readUClimit( uint8_t address, uint8_t ch );
 	uint16_t PAC1954_readOPlimit( uint8_t address, uint8_t ch );
-	uint16_t PAC1954_readlimitReg( uint8_t address, uint8_t ch, uint8_t reg );
+	uint16_t PAC1954_readLimitReg( uint8_t address, uint8_t ch, uint8_t reg );
 	uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg);
 
+	void PAC1954_applySettings( PacSettings * settings, PacChannel * channels, uint8_t cnt);
 
 	#define PAC_OK						0x01
 	#define PAC_BAD						0x00
