@@ -13,7 +13,6 @@ extern "C" {
 /* Variables -----------------------------------------------------------------*/
 
 /* Private includes ----------------------------------------------------------*/
-#include "hardware.h"
 #include "lpuart1.h"
 #include "i2c1.h"
 #include "eeprom.h"
@@ -46,14 +45,28 @@ void readUVLimits(void);
 void readOCLimits(void);
 void readUCLimits(void);
 void readOPLimits(void);
+uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt);
 
-void I2C1_FindDevices(void);
-uint8_t I2C1_FindPAC1954(void);
+//I2C
+void findI2CDevices(void);
 void printI2Cerror(uint8_t error);
+
+// EEPROM
 void resetSettings(void);
-uint32_t settings_write(void);
+uint8_t loadSettings(void);
+uint8_t storeSettings(void);
+//IRQ
 void EXTI4_15_IRQ_handler(void);
 /* Private defines -----------------------------------------------------------*/
+/* Hearbeat */
+#define HEART_ON  GPIOB->ODR |= GPIO_ODR_OD5
+#define HEART_OFF GPIOB->ODR &= ~(GPIO_ODR_OD5)
+
+#define OV 0x01
+#define UV 0x02
+#define OC 0x03
+#define UC 0x04
+#define OP 0x05
 
 /* USER CODE BEGIN Private defines */
 /* Time-out values */

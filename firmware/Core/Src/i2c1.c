@@ -247,7 +247,6 @@ void I2C1_IRQHandler(void){
 			  error = ERROR_I2C_OVERFLOW;
 		  }
 	  }
-
   }else if(I2C1->ISR & I2C_ISR_TXIS){ /*  Ready to send the next byte */
 	  I2C1 ->TXDR = *i2c_txBuffer++; // Put the next byte
 	  toSend--;

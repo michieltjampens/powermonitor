@@ -8,7 +8,7 @@ Working either standalone with data stored on onboard flash or realtime by sendi
 - 30V maximum system voltage, haven't tested the current limit yet.
 - 8MB local flash storage
 - Onboard programmer/debugger/usb to uart with [STLINK V3MODS](https://www.st.com/en/development-tools/stlink-v3mods.html)
-- Long term energy consumption measurement (days)
+- Long term energy consumption measurement
 
 ## Progress
 - Currently testing rev0
@@ -20,6 +20,7 @@ Working either standalone with data stored on onboard flash or realtime by sendi
 - Flash via spi -> store and download data
 - PAC Alerts
 - RTC
+- DMA reading I2C and writing UART
 
 ## Repo folders content
 ### board
@@ -36,4 +37,4 @@ Contains the relevant datasheets
 Contains the files needed to read/process the data from the board with [dcafs](https://github.com/michieltjampens/dcafs).
 
 ### firmware
-Contains the ST CubeIDE project with bare-metal code.
+Contains the ST CubeIDE project with bare-metal c code.

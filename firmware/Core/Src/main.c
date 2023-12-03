@@ -7,19 +7,20 @@ __IO uint32_t Tick;
 __IO uint16_t error;
 
 /* Private variables ---------------------------------------------------------*/
-uint8_t delay;
+
 uint8_t pacAddress=0x00;
 uint16_t heartBeats=0;
-uint16_t recBuffer[12];
 
+uint8_t delay;
 uint16_t check=0;
 uint8_t pacState=0;
 
-static settings_t _settings_in_ram;
-settings_t *GLOBAL_settings_ptr = &_settings_in_ram;
+static PacSettings pacSettings;
+PacSettings *GLOBAL_settings_ptr = &pacSettings;
 
-static voltcur lastVoltCur;
-voltcur *GLOBAL_voltcur_ptr = &lastVoltCur;
+static VoltageCurrent lastVoltCur[PAC_CHANNELS];
+
+PacChannel chSettings[PAC_CHANNELS];
 
 int main(void){
 	uint8_t result;
@@ -35,16 +36,6 @@ int main(void){
     SysTick_Config(16000); /* 1ms config */
 
 	init();
-	PAC1954_clearAlertEnable(pacAddress);
-	error = PAC1954_setOVLimit(pacAddress,1,0x1000);
-	error = PAC1954_setOVLimit(pacAddress,2,0x1100);
-	error = PAC1954_setOVLimit(pacAddress,3,0x0110);
-	error = PAC1954_setOVLimit(pacAddress,4,0x1111);
-
-	error = PAC1954_setUVLimit(pacAddress,1,0x1000);
-	error = PAC1954_setUVLimit(pacAddress,2,0x1100);
-	error = PAC1954_setUVLimit(pacAddress,3,0x4110);
-	error = PAC1954_setUVLimit(pacAddress,4,0x5111);
 
 	if(  error == I2C_OK)
 		error = 0x00;
@@ -156,21 +147,16 @@ void init(void){
     while(delay!=0); // 10ms delay
 
     /* Read the settings from the internal E²PROM */
-    if( sizeof(settings_t) % 4 ==0){ // Needs to be a multiple of 4 because e²prom has 32bit pages
-    	// Get the settings from e²prom
-    	memcpy(GLOBAL_settings_ptr, (uint32_t*)DATA_E2_ADDR, sizeof(settings_t));
-
-    	//if( _settings_in_ram.pacAddress==0x00){ // nothing in there yet
-    	//	resetSettings();
-    	//}
-    }
-    pacAddress = 0x1D;//_settings_in_ram.pacAddress; // Get the read address
+    //loadSettings();
+    pacAddress = 0x1D;//pacSettings.pacAddress; // Get the read address
 
     // Check if I2C hardware is found
     LPUART1_writeText("I>PAC1954:");
-    temp=1;//I2C1_PokeDevice(pacAddress);
+    temp=I2C1_PokeDevice(pacAddress);
     if( temp==1){
     	LPUART1_writeText("OK\r\n");
+    	PAC1954_clearAlertEnable(pacAddress);  // Make sure alerts are cleared
+    	PAC1954_applySettings( &pacSettings, chSettings,PAC_CHANNELS);
     	pacState=PAC_FOUND;
     }else if( temp == ERROR_I2C_TIMEOUT ){
     	LPUART1_writeText("TimeOut\r\n");
@@ -223,7 +209,7 @@ void configure_IO(void){
 
 /* ******************************************** I 2 C ******************************************************** */
 
-void I2C1_FindDevices(){
+void findI2CDevices(){
 
 	uint8_t addr;
 	uint8_t tmp;
@@ -254,23 +240,53 @@ void I2C1_FindDevices(){
 	LPUART1_writeHexWord(tmp);
 	LPUART1_writeText(" devices\r\n");
 }
+void printI2Cerror(uint8_t error){
+	switch(error){
+		case ERROR_I2C_NO_TXE_EMTPY:    LPUART1_writeText("Transfer Busy"); break;
+		case ERROR_I2C_NO_BUSY_FLAG :   LPUART1_writeText("Busy Flag"); break;
+		case ERROR_I2C_NO_TC_DETECT :   LPUART1_writeText("No TC");     break;
+		case ERROR_I2C_NO_BUSY_FLAG2:   LPUART1_writeText("No Busy 2"); break;
+		case ERROR_I2C_NO_STOP_DT:	    LPUART1_writeText("STOP DT");   break;
+		case ERROR_I2C_DATA_REC_DELAY:  LPUART1_writeText("REC Delay"); break;
+		default: LPUART1_writeText("Other"); break;
+	}
+}
 /* ***************************************** C L I ******************************************************* */
 void executeCommand( uint8_t * cmd ){
     uint8_t ok = 0xFF;
 
     switch( cmd[0]){
-      case 'E': // E²PROM
-    	  if( cmd[1]=='C'){ // Reset the e²prom
+      case 'e': // E²PROM
+    	  if( cmd[1]=='c'){ // Reset the e²prom
     		  resetSettings();
-    	  }else if( cmd[1]=='R'){ // Read from the e²prom
-    		  memcpy(GLOBAL_settings_ptr, (uint32_t*)DATA_E2_ADDR, sizeof(settings_t));
-    	  }else if( cmd[1]=='W'){ // Write to the e²prom
-    		  settings_write();
+    	  }else if( cmd[1]=='r'){ // Read from the e²prom
+    		  memcpy(GLOBAL_settings_ptr, (uint32_t*)DATA_E2_ADDR, sizeof(pacSettings));
+    	  }else if( cmd[1]=='w'){ // Write to the e²prom
+    		  storeSettings();
     	  }
-      case 's': // Read data
-    	  /*if( I2C1_SendSingleByte(pacAddress,PAC1954_REFRESH_N==0x01)){
-    		  ok=0xFF;
-    	  }*/
+      case 's': // Set data
+    	  if( cmd[4]!=':'){
+    		  ok=0x00;
+    		  break;
+    	  }
+    	  switch(cmd[1]){
+    	  	  case 'o':
+    	  		  switch(cmd[2]){
+    	  		  	  case 'v': applyLimit( OV,cmd[3]-'0',cmd+5 ); break;
+    	  		  	  case 'c': applyLimit( OC,cmd[3]-'0',cmd+5 ); break;
+    	  		  	  case 'p': applyLimit( OP,cmd[3]-'0',cmd+5 ); break;
+    	  		  	  default: ok=0x00; break;
+    	  		  }
+    	  		  break;
+    	  	  case 'u':
+    	  		  switch(cmd[2]){
+	  		  	  	  case 'v': applyLimit( UV,cmd[3]-'0',cmd+5 ); break;
+	  		  	  	  case 'c': applyLimit( UC,cmd[3]-'0',cmd+5 ); break;
+    	  		  	  default: ok=0x00; break;
+    	  		  }
+    	  		  break;
+    	  	 default: ok=0x00; break;
+    	  }
     	  break;
       case 'p': // Send last voltage and sense reading for all channels
     	  readVCdata();
@@ -307,6 +323,68 @@ void executeCommand( uint8_t * cmd ){
     	LPUART1_writeText(":OK\r\n");
     }
 }
+uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
+	uint16_t nr=0x00;
+	uint8_t  ok=0x01;
+
+	// First convert lmt to a number...
+	uint8_t maxdigits=6; // To limit the out of bounds possibility
+	while( *lmt != 0x00 && maxdigits>0 ){
+		nr += *lmt - '0';
+		lmt++;
+		if( *lmt != 0x00 ) // If this wasn't the last digit, shift it
+			nr *= 10;
+		maxdigits--;
+	}
+	if( maxdigits==0 )
+		return 0x22;
+
+    if( chn <= PAC_CHANNELS){
+	   switch(reg){
+			case UV: chSettings[chn-1].UV_lim = nr; break;
+			case OV: chSettings[chn-1].OV_lim = nr; break;
+			case UC: chSettings[chn-1].UC_lim = nr; break;
+			case OC: chSettings[chn-1].OC_lim = nr; break;
+			case OP: chSettings[chn-1].OP_lim = nr; break;
+		}
+    }else{
+    	return 0x23; // return that the given ch was bad
+    }
+
+	storeSettings(); // Store the change in eeprom
+
+	uint32_t macro;
+	switch(reg){
+		case UV:
+			ok=PAC1954_setUVLimit( pacAddress,chn,nr );
+			macro = PAC_UV_ALERT_EN_CH1 >> (chn-1);
+			break;
+		case OV:
+			ok=PAC1954_setOVLimit( pacAddress,chn,nr );
+			macro = PAC_OV_ALERT_EN_CH1 >> (chn-1);
+			break;
+		case UC:
+			ok=PAC1954_setUCLimit( pacAddress,chn,nr );
+			macro = PAC_UC_ALERT_EN_CH1 >> (chn-1);
+			break;
+		case OC:
+			ok=PAC1954_setOCLimit( pacAddress,chn,nr );
+			macro = PAC_OC_ALERT_EN_CH1 >> (chn-1);
+			break;
+		case OP:
+			ok=PAC1954_setOPLimit( pacAddress,chn,nr );
+			macro = PAC_OP_ALERT_EN_CH1 >> (chn-1);
+			break;
+	}
+	if( ok == I2C_OK){
+		if( nr==0){
+			PAC1954_disableAlerts( pacAddress,macro );
+		}else{
+			PAC1954_enableAlerts( pacAddress,macro );
+		}
+	}
+	return ok;
+}
 /* ***************************************** P A C 1 9 5 4  ******************************************************* */
 void readAll(){
 	readVCdata(); // Read Vbus, Vsense
@@ -318,26 +396,16 @@ void readAll(){
 	//readAlertEnable();
 }
 void readVCdata(){
-	uint8_t res = PAC1954_readVoltageCurrent( pacAddress, &lastVoltCur );
+	uint8_t res = PAC1954_readVoltageCurrent( pacAddress, lastVoltCur );
 	if( res==I2C_OK ){
 			LPUART1_writeText("VC:");
 			LPUART1_writeHexWord(pacAddress);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out1_voltage);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out1_current);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out2_voltage);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out2_current);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out3_voltage);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out3_current);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out4_voltage);
-			LPUART1_writeByte(';');
-			LPUART1_writeHexWord(lastVoltCur.out4_current);
+			for( uint8_t a=0;a<PAC_CHANNELS;a++ ){
+				LPUART1_writeByte(';');
+				LPUART1_writeHexWord(lastVoltCur[a].voltage);
+				LPUART1_writeByte(';');
+				LPUART1_writeHexWord(lastVoltCur[a].current);
+			}
 			LPUART1_writeText("\r\n");
 			pacState=PAC_FOUND;
 	}else{
@@ -347,17 +415,6 @@ void readVCdata(){
 	}
 }
 
-void printI2Cerror(uint8_t error){
-	switch(error){
-		case ERROR_I2C_NO_TXE_EMTPY:    LPUART1_writeText("Transfer Busy"); break;
-		case ERROR_I2C_NO_BUSY_FLAG :   LPUART1_writeText("Busy Flag"); break;
-		case ERROR_I2C_NO_TC_DETECT :   LPUART1_writeText("No TC");     break;
-		case ERROR_I2C_NO_BUSY_FLAG2:   LPUART1_writeText("No Busy 2"); break;
-		case ERROR_I2C_NO_STOP_DT:	    LPUART1_writeText("STOP DT");   break;
-		case ERROR_I2C_DATA_REC_DELAY:  LPUART1_writeText("REC Delay"); break;
-		default: LPUART1_writeText("Other"); break;
-	}
-}
 void readAccumulator( uint8_t acc ){
 	uint8_t buffer[8];
 
@@ -367,10 +424,10 @@ void readAccumulator( uint8_t acc ){
 		LPUART1_writeText("AC:");
 		LPUART1_writeHexWord(pacAddress);
 		switch(acc){
-			case 1:LPUART1_writeText(";3;"); break;
-			case 2:LPUART1_writeText(";4;"); break;
-			case 3:LPUART1_writeText(";1;"); break;
-			case 4:LPUART1_writeText(";2;"); break;
+			case 1:LPUART1_writeText(";1;"); break;
+			case 2:LPUART1_writeText(";2;"); break;
+			case 3:LPUART1_writeText(";3;"); break;
+			case 4:LPUART1_writeText(";4;"); break;
 		}
 		LPUART1_writeHexWord(buffer[0]);
 		LPUART1_writeHexByteArrayNoPrefix(&buffer[1],6);
@@ -383,12 +440,11 @@ void readAccumulator( uint8_t acc ){
 		}else{
 			LPUART1_writeText("0x0");
 		}
-		LPUART1_writeText("\r\n");
 	}else{
 		LPUART1_writeText("I2C:AC Error->");
 		printI2Cerror(res);
-		LPUART1_writeText("\r\n");
 	}
+	LPUART1_writeText("\r\n");
 }
 void readAlertStatus(){
 	uint32_t status = PAC1954_readAlertStatus(pacAddress);
@@ -462,43 +518,54 @@ void readOPLimits(){
 /* ************************************* E E P R O M ************************************************************** */
 void resetSettings(){
 	// Find pac
-	_settings_in_ram.pacAddress = PAC1954_findAddress();
-	_settings_in_ram.out1_lowvlim=10000;
-	_settings_in_ram.out1_highvlim=16000;
-	_settings_in_ram.out1_curlim=2000;
+	pacSettings.pacAddress = PAC1954_findAddress();
 
-	_settings_in_ram.out2_lowvlim=10000;
-	_settings_in_ram.out2_highvlim=16000;
-	_settings_in_ram.out2_curlim=2000;
+	for( uint8_t a=0;a<PAC_CHANNELS;a++){
+		chSettings[a].OV_lim = 0x00;
+		chSettings[a].UV_lim = 0x00;
+		chSettings[a].OC_lim = 0x00;
+		chSettings[a].UC_lim = 0x00;
+		chSettings[a].OP_lim = 0x00;
+	}
 
-	_settings_in_ram.out3_lowvlim=10000;
-	_settings_in_ram.out3_highvlim=16000;
-	_settings_in_ram.out3_curlim=2000;
+	pacSettings.overcurrentTime=10;
+	pacSettings.alerts_enable=0x00;
 
-	_settings_in_ram.out4_lowvlim=10000;
-	_settings_in_ram.out4_highvlim=16000;
-	_settings_in_ram.out4_curlim=2000;
-
-	_settings_in_ram.overcurrentTime=10;
-
-	settings_write();
+	storeSettings();
 }
-uint32_t settings_write(void){
+uint8_t loadSettings(void){
+	for( uint8_t a=0;a<PAC_CHANNELS;a++){
+		if( sizeof(chSettings[a]) % 4 ==0){ // Needs to be a multiple of 4 because e²prom has 32bit pages
+			// Get the settings from e²prom
+			memcpy(GLOBAL_settings_ptr, (uint32_t*)DATA_E2_ADDR, sizeof(chSettings[a]));
+
+			if( a==1 && chSettings[a].pacAddress==0x00){ // nothing in there yet
+				resetSettings();
+				return 0x02;
+			}
+			return 0x01;
+		}
+	}
+	return 0x00;
+}
+uint8_t storeSettings(void){
 
 	UnlockPELOCK();
 
-    uint32_t *src = (uint32_t*)GLOBAL_settings_ptr;
     uint32_t *dst = (uint32_t*)DATA_E2_ADDR;
 
     //write settings word (uint32_t) at a time
     FLASH->PECR |= FLASH_PECR_DATA; /* (1) */
-    for (uint32_t i = 0; i < sizeof(settings_t)/sizeof(uint32_t); i++){
-        if (*dst != *src){ //write only if value has been modified
-        	*(__IO uint32_t *)dst = *src;
-        	__WFI(); /* (3) */
-        }
-        src++;
-        dst++;
+    for( uint8_t a=0;a<PAC_CHANNELS;a++ ){
+    	uint32_t *src = (uint32_t*)&chSettings[a];
+		for (uint32_t i = 0; i < sizeof(chSettings[a])/sizeof(uint32_t); i++){
+			if (*dst != *src){ //write only if value has been modified
+				*(__IO uint32_t *)dst = *src;
+				__WFI(); /* (3) */
+			}
+			src++;
+			dst++;
+		}
     }
     FLASH->PECR &= ~(FLASH_PECR_DATA); /* (4) */
 
