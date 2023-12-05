@@ -5,17 +5,18 @@
     <telnet port="23" title="DCAFS">
       <textcolor>lightgray</textcolor>
     </telnet>
+    <taskmanager id="pm">tmscripts\pm.xml</taskmanager>
   </settings>
   <streams>
     <!-- Defining the various streams that need to be read -->
-    <stream id="fuse" type="serial">
+    <stream id="powmon" type="serial">
       <eol>crlf</eol>
       <port>COM9</port>
       <serialsettings>19200,8,1,none</serialsettings>
     </stream>
   </streams>
   <paths>
-    <path delimiter=";" id="fuse" import="paths\fuse.xml" src="raw:fuse"/>
+    <path delimiter=";" id="powmon" import="paths\pm.xml" src="raw:powmon"/>
   </paths>
   <databases>
     <sqlite id="power" path="C:\local_home\GIT\dcafs\db\power.sqlite">
@@ -26,7 +27,7 @@
         <real rtval="o2_voltage">voltage</real>
         <real rtval="o2_current">current</real>
         <real rtval="o2_power">power</real>
-        <int rtval="o2_period">period</int>
+        <real rtval="o2_period">period</real>
         <real rtval="o2_energy">energy</real>
       </table>
     </sqlite>

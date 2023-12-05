@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<tasklist>
+
+  <!-- Tasks are single commands to execute -->
+  <tasks>
+    <!-- Out 1 -->
+    <task id="ov1" output="stream:powmon">sov3:{mint:i0*(65535/32)}</task>
+    <task id="op1" output="stream:powmon">sop3:{mint:i0*(65535/32)}</task>
+    <task id="uv1" output="stream:powmon">suv3:{mint:i0*(65535/32)}</task>
+    <task id="oc1" output="stream:powmon">soc3:{mint:i0*(65535/4)}</task>
+    <task id="uc1" output="stream:powmon">suc3:{mint:i0*(65535/4)}</task>
+    <!-- Out 2 -->
+    <task id="ov2" output="stream:powmon">sov4:{mint:i0*(65535/32)}</task>
+    <task id="op2" output="stream:powmon">sop4:{mint:i0*(65535/32)}</task>
+    <task id="uv2" output="stream:powmon">suv4:{mint:i0*(65535/32)}</task>
+    <task id="oc2" output="stream:powmon">soc4:{mint:i0*(65535/4)}</task>
+    <task id="uc2" output="stream:powmon">suc4:{mint:i0*(65535/4)}</task>
+    <!-- Out 3 -->
+    <task id="ov3" output="stream:powmon">sov1:{mint:i0*(65535/32)}</task>
+    <task id="op3" output="stream:powmon">sop1:{mint:i0*(65535/32)}</task>
+    <task id="uv3" output="stream:powmon">suv1:{mint:i0*(65535/32)}</task>
+    <task id="oc3" output="stream:powmon">soc1:{mint:i0*(65535/4)}</task>
+    <task id="uc3" output="stream:powmon">suc1:{mint:i0*(65535/4)}</task>
+    <!-- Out 4 -->
+    <task id="ov4" output="stream:powmon">sov2:{mint:i0*(65535/32)}</task>
+    <task id="op4" output="stream:powmon">sov2:{mint:i0*(65535/32)}</task>
+    <task id="uv4" output="stream:powmon">suv2:{mint:i0*(65535/32)}</task>
+    <task id="oc4" output="stream:powmon">soc2:{mint:i0*(65535/4)}</task>
+    <task id="uc4" output="stream:powmon">suc2:{mint:i0*(65535/4)}</task>
+
+    <task output="stream:powmon" interval="10m">ac1</task>
+    <task output="stream:powmon" interval="100ms,10m">ac2</task>
+    <task output="stream:powmon" interval="200ms,10m">ac3</task>
+    <task output="stream:powmon" interval="300ms,10m">ac4</task>
+  </tasks>
+</tasklist>
