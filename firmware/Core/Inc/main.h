@@ -35,7 +35,6 @@ void configure_IO(void);
 void executeCommand( uint8_t * cmd );
 
 // PAC1954
-void readAll(void);
 void readVCdata(void);
 void readAccumulator( uint8_t acc );
 void readAlertStatus(void);

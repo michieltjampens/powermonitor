@@ -50,7 +50,7 @@ int main(void){
 			error=0;
 		}
 		if( check>=220 && pacState==PAC_REFRESHED){ // Minimum of 10ms between refresh and readout
-			readAll();
+			readVCdata();
 			check=0; // Reset counter
 		}
 		if( check>=218 && pacState==PAC_FOUND){
@@ -254,15 +254,35 @@ void printI2Cerror(uint8_t error){
 /* ***************************************** C L I ******************************************************* */
 void executeCommand( uint8_t * cmd ){
     uint8_t ok = 0xFF;
-
+      /*
+       * EEPROM
+       * er -> Reset settings to their defaults (doesn't store)
+       * el -> Load settings from eeprom, overwriting current ones
+       * es -> Store settings to eeprom
+       * SET LIMIT AND ENABLE THE ALERT of channel x with (decimal) value y
+       * - if y is 0 disables it instead
+       * - This doesn't store it to eeprom, so do 'es' when ready.
+       * sovx:yyyy -> Overvoltage
+       * socx:yyyy -> Overcurrent
+       * sopx:yyyy -> Overpower
+       * suvx:yyyy -> Undervoltage
+       * sucx:yyyy -> Undercurrent
+       * READ STUFF
+	   * uv -> read Under Voltage limits
+	   * uc -> read Under Current Limits
+	   * ov -> Read Over voltage limits
+	   * oc -> Read Over current limits
+	   * op -> read Over Power limits
+	   * as -> Read alert status
+       * ae -> Read alert enable
+       * acx -> Read accumulator for channel x
+	   */
     switch( cmd[0]){
       case 'e': // E²PROM
-    	  if( cmd[1]=='c'){ // Reset the e²prom
-    		  resetSettings();
-    	  }else if( cmd[1]=='r'){ // Read from the e²prom
-    		  memcpy(GLOBAL_settings_ptr, (uint32_t*)DATA_E2_ADDR, sizeof(pacSettings));
-    	  }else if( cmd[1]=='w'){ // Write to the e²prom
-    		  storeSettings();
+    	  switch(cmd[1]){
+    	  	  case 'r': resetSettings(); break;
+    	  	  case 'l': loadSettings();  break;
+    	  	  case 'w': storeSettings(); break;
     	  }
       case 's': // Set data
     	  if( cmd[4]!=':'){
@@ -310,8 +330,14 @@ void executeCommand( uint8_t * cmd ){
     	  switch(cmd[1]){
     	  	  case 's': readAlertStatus(); break;
     	  	  case 'e': readAlertEnable(); break;
+    	  	  case 'c':
+    	  		  cmd[2]=cmd[2]-'0';
+    	  		  if( cmd[2] <= PAC_CHANNELS)
+    	  		  	  readAccumulator(cmd[2]);
+    	  	  	  break;
     	  	  default: ok=0x00;
     	  }
+
     	  break;
       default : ok=0x00; break;
 
@@ -324,16 +350,16 @@ void executeCommand( uint8_t * cmd ){
     }
 }
 uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
-	uint16_t nr=0x00;
+	uint16_t value=0x00;
 	uint8_t  ok=0x01;
 
-	// First convert lmt to a number...
+	// First convert lmt to the value...
 	uint8_t maxdigits=6; // To limit the out of bounds possibility
 	while( *lmt != 0x00 && maxdigits>0 ){
-		nr += *lmt - '0';
+		value += *lmt - '0';
 		lmt++;
 		if( *lmt != 0x00 ) // If this wasn't the last digit, shift it
-			nr *= 10;
+			value *= 10;
 		maxdigits--;
 	}
 	if( maxdigits==0 )
@@ -341,43 +367,41 @@ uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
 
     if( chn <= PAC_CHANNELS){
 	   switch(reg){
-			case UV: chSettings[chn-1].UV_lim = nr; break;
-			case OV: chSettings[chn-1].OV_lim = nr; break;
-			case UC: chSettings[chn-1].UC_lim = nr; break;
-			case OC: chSettings[chn-1].OC_lim = nr; break;
-			case OP: chSettings[chn-1].OP_lim = nr; break;
+			case UV: chSettings[chn-1].UV_lim = value; break;
+			case OV: chSettings[chn-1].OV_lim = value; break;
+			case UC: chSettings[chn-1].UC_lim = value; break;
+			case OC: chSettings[chn-1].OC_lim = value; break;
+			case OP: chSettings[chn-1].OP_lim = value; break;
 		}
     }else{
-    	return 0x23; // return that the given ch was bad
+    	return 0x23; // return that the given ch was incorrect
     }
-
-	storeSettings(); // Store the change in eeprom
 
 	uint32_t macro;
 	switch(reg){
 		case UV:
-			ok=PAC1954_setUVLimit( pacAddress,chn,nr );
+			ok=PAC1954_setUVLimit( pacAddress,chn,value );
 			macro = PAC_UV_ALERT_EN_CH1 >> (chn-1);
 			break;
 		case OV:
-			ok=PAC1954_setOVLimit( pacAddress,chn,nr );
+			ok=PAC1954_setOVLimit( pacAddress,chn,value );
 			macro = PAC_OV_ALERT_EN_CH1 >> (chn-1);
 			break;
 		case UC:
-			ok=PAC1954_setUCLimit( pacAddress,chn,nr );
+			ok=PAC1954_setUCLimit( pacAddress,chn,value );
 			macro = PAC_UC_ALERT_EN_CH1 >> (chn-1);
 			break;
 		case OC:
-			ok=PAC1954_setOCLimit( pacAddress,chn,nr );
+			ok=PAC1954_setOCLimit( pacAddress,chn,value );
 			macro = PAC_OC_ALERT_EN_CH1 >> (chn-1);
 			break;
 		case OP:
-			ok=PAC1954_setOPLimit( pacAddress,chn,nr );
+			ok=PAC1954_setOPLimit( pacAddress,chn,value );
 			macro = PAC_OP_ALERT_EN_CH1 >> (chn-1);
 			break;
 	}
 	if( ok == I2C_OK){
-		if( nr==0){
+		if( value==0){
 			PAC1954_disableAlerts( pacAddress,macro );
 		}else{
 			PAC1954_enableAlerts( pacAddress,macro );
@@ -386,15 +410,6 @@ uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
 	return ok;
 }
 /* ***************************************** P A C 1 9 5 4  ******************************************************* */
-void readAll(){
-	readVCdata(); // Read Vbus, Vsense
-	//readAccumulator(3);
-	//readAccumulator(4);
-	//readAccumulator(1);
-	//readAccumulator(2);
-	//readAlertStatus();
-	//readAlertEnable();
-}
 void readVCdata(){
 	uint8_t res = PAC1954_readVoltageCurrent( pacAddress, lastVoltCur );
 	if( res==I2C_OK ){
