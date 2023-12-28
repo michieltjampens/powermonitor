@@ -43,6 +43,7 @@
 
 	uint8_t PAC1954_findAddress(void);
 	uint8_t PAC1954_readVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur );
+	uint8_t PAC1954_readAvgVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur );
 	uint32_t PAC1954_readAccCount( uint8_t address ); // Read the content of the accumulator counter register
 	uint8_t PAC1954_doRefreshV( uint8_t address);
 	uint8_t PAC1954_checkState(void);

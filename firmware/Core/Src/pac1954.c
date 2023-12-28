@@ -45,6 +45,25 @@ uint8_t PAC1954_readVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur
 	return result;
 }
 /**
+ * Read the current value of the voltage and current registers
+ * address - the address of the PAC
+ * lastVoltCur - the struct that holds the data
+ * return The result of the I2C operation
+ */
+uint8_t PAC1954_readAvgVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur ){
+	uint16_t recBuffer[PAC_CHANNELS*2];
+	uint8_t result = I2C1_Read16bitData( address, PAC1954_VBUSN_AVG_REG, PAC_CHANNELS*2,recBuffer);
+	if( result == I2C_OK ){
+		// The order of the sense pins doesn't match the sequence on the board...
+		// This will be fixed client side.
+		for( uint8_t a=0;a<4;a++){
+			lastVoltCur[a].voltage = recBuffer[a];
+			lastVoltCur[a].current = recBuffer[a+4];
+		}
+	}
+	return result;
+}
+/**
  * Read the content of the Accummulator count of a certain pac
  * address The address of the pac
  * returns The count or 0xFFFFFFFF if there was a failure

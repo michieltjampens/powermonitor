@@ -409,9 +409,9 @@ uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
 	}
 	return ok;
 }
-/* ***************************************** P A C 1 9 5 4  ******************************************************* */
+/* ***************************************** P A C 1 9 5 X  ******************************************************* */
 void readVCdata(){
-	uint8_t res = PAC1954_readVoltageCurrent( pacAddress, lastVoltCur );
+	uint8_t res = PAC1954_readAvgVoltageCurrent( pacAddress, lastVoltCur );
 	if( res==I2C_OK ){
 			LPUART1_writeText("VC:");
 			LPUART1_writeHexWord(pacAddress);
