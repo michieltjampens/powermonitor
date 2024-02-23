@@ -81,6 +81,7 @@ uint8_t I2C1_transmitData( uint8_t address, uint8_t length, uint8_t *data){
 uint8_t I2C1_start(){
 	uint32_t tickstart;
 	// Enable auto-end, set amount of bytes to send and the address shifted for R/W bit
+	SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Make sure this is cleared
 
 	I2C1->CR2 |= I2C_CR2_START;
 
