@@ -416,11 +416,11 @@ uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
 	return ok;
 }
 /* ***************************************** P A C 1 9 5 X  ******************************************************* */
-void readVCdata(){
-	uint8_t res = PAC1954_readAvgVoltageCurrent( pacAddress, lastVoltCur );
+void readVCdata(uint8_t address){
+	uint8_t res = PAC1954_readAvgVoltageCurrent( address, lastVoltCur );
 	if( res==I2C_OK ){
 			LPUART1_writeText("VC:");
-			LPUART1_writeHexWord(pacAddress);
+			LPUART1_writeHexWord(address);
 			for( uint8_t a=0;a<PAC_CHANNELS;a++ ){
 				LPUART1_writeByte(';');
 				LPUART1_writeHexWord(lastVoltCur[a].voltage);
@@ -430,6 +430,13 @@ void readVCdata(){
 			LPUART1_writeText("\r\n");
 			pacState=PAC_FOUND;
 	}else{
+		if( res == ERROR_I2C_NACK){
+			pacState=PAC_NAK;
+			if( I2C1_PokeDevice(pacAddress) == I2C_OK ){
+				pacState=PAC_FOUND;
+			}
+		}
+		pacState=PAC_FOUND;
 		LPUART1_writeText("I2C:VC Error->");
 		printI2Cerror(res);
 		LPUART1_writeText("\r\n");
