@@ -118,7 +118,12 @@ void LPUART1_writeByte( uint8_t data ){
 	if( outEnd+1 == outStart || (outStart==outHead && outEnd+1==outTail )){
 		// Getting in here means that adding a byte would overflow the buffer, so wait a bit
 		irqStatus |= WAITING; // Put up the flag that we are waiting for a byte to transfer
-		while( irqStatus & WAITING );
+		uint32_t tickstart = Tick;
+		while( irqStatus & WAITING ){ // This can be infinite?
+			if ((Tick - tickstart ) > 50){
+				return; // Buffer doesn't empty?
+			}
+		}
 	}
 	*outEnd++ = data;
 	if (outEnd == outTail) // So never write on the tail!
