@@ -50,7 +50,7 @@ int main(void){
 			error=0;
 		}
 		if( check>=220 && pacState==PAC_REFRESHED){ // Minimum of 10ms between refresh and readout
-			readVCdata();
+			readVCdata(pacAddress);
 			check=0; // Reset counter
 		}
 		if( check>=218 && pacState==PAC_FOUND){
@@ -154,12 +154,9 @@ void init(void){
     temp=I2C1_PokeDevice(pacAddress);
     if( temp==1){
     	LPUART1_writeText("OK\r\n");
-    	//PAC1954_clearAlertEnable(pacAddress);  // Make sure alerts are cleared
-    	//PAC1954_applySettings( &pacSettings, chSettings,PAC_CHANNELS);
-    	//PAC1954_doRefreshV(pacAddress);
-    	delay = 5; // wait a bit
-    	while(delay!=0); // 5ms delay
-    	readVCdata(pacAddress);
+    	PAC1954_clearAlertEnable(pacAddress);  // Make sure alerts are cleared
+    	PAC1954_applySettings( &pacSettings, chSettings,PAC_CHANNELS);
+    	PAC1954_doRefreshV(pacAddress);
     	pacState=PAC_FOUND;
     	check=0;
     }else if( temp == ERROR_I2C_TIMEOUT ){
