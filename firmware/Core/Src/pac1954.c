@@ -26,7 +26,7 @@ uint8_t PAC1954_findAddress(){
 	return 0x00;
 }
 /**
- * Read the current value of the voltage and current registers
+ * Read the current value of the voltage and current registers.At 100kHz, this takes about 1.9ms
  * address - the address of the PAC
  * lastVoltCur - the struct that holds the data
  * return The result of the I2C operation
@@ -45,7 +45,7 @@ uint8_t PAC1954_readVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur
 	return result;
 }
 /**
- * Read the current value of the voltage and current registers
+ * Read the current value of the voltage and current registers. At 100kHz, this takes about 1.9ms
  * address - the address of the PAC
  * lastVoltCur - the struct that holds the data
  * return The result of the I2C operation
@@ -86,6 +86,9 @@ uint32_t PAC1954_readAccCount( uint8_t address ){
  */
 uint8_t PAC1954_doRefreshV( uint8_t address){
 	return I2C1_transmitByte(address,PAC1954_REFRESH_V);
+}
+uint8_t PAC1954_doRefresh( uint8_t address){
+	return I2C1_transmitByte(address,PAC1954_REFRESH);
 }
 /**
  * Request the current state of the PAC connection
