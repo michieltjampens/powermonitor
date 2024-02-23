@@ -63,7 +63,6 @@ int main(void){
 				LPUART1_writeText("\r\n");
 			}
 		}
-
 		if( LPUART1_hasCmd() ){
 			LPUART1_Transfer_Buffer();
 		}
@@ -155,9 +154,14 @@ void init(void){
     temp=I2C1_PokeDevice(pacAddress);
     if( temp==1){
     	LPUART1_writeText("OK\r\n");
-    	PAC1954_clearAlertEnable(pacAddress);  // Make sure alerts are cleared
-    	PAC1954_applySettings( &pacSettings, chSettings,PAC_CHANNELS);
+    	//PAC1954_clearAlertEnable(pacAddress);  // Make sure alerts are cleared
+    	//PAC1954_applySettings( &pacSettings, chSettings,PAC_CHANNELS);
+    	//PAC1954_doRefreshV(pacAddress);
+    	delay = 5; // wait a bit
+    	while(delay!=0); // 5ms delay
+    	readVCdata(pacAddress);
     	pacState=PAC_FOUND;
+    	check=0;
     }else if( temp == ERROR_I2C_TIMEOUT ){
     	LPUART1_writeText("TimeOut\r\n");
     }else{
@@ -202,44 +206,15 @@ void configure_IO(void){
   /* Select output mode (01) on GPIOB pin 5 */
   /*
     PB5 = Heart beat led
+    PB0 = PAC1954 PWRDN
   */
   GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE5))| (GPIO_MODER_MODE5_0);
+  GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE0))| (GPIO_MODER_MODE0_0);
 
 }
 
 /* ******************************************** I 2 C ******************************************************** */
 
-void findI2CDevices(){
-
-	uint8_t addr;
-	uint8_t tmp;
-	LPUART1_writeText("I2C>");
-	/* Clear the address and bytes to send spot, then fill them in*/
-	for( addr=0x01;addr<127;addr++){
-		if( addr%16==0)
-			LPUART1_writeText("\r\nI2C>");
-		//
-		switch( I2C1_PokeDevice(addr) ){
-			case 0x00:
-				LPUART1_writeByte('.'); // Show some progress?
-				break;
-			case 0x01:
-				LPUART1_writeHexWord(addr);
-				tmp++;
-				break;
-			case ERROR_I2C_TIMEOUT:
-				LPUART1_writeText(":Time Out");
-				addr=0x8F;//Stop searching
-				break;
-		}
-
-		delay = 30; // wait a bit
-		while(delay!=0); // 30ms delay
-	}
-	LPUART1_writeText("\r\nI2C>Found ");
-	LPUART1_writeHexWord(tmp);
-	LPUART1_writeText(" devices\r\n");
-}
 void printI2Cerror(uint8_t error){
 	switch(error){
 		case ERROR_I2C_NO_TXE_EMTPY:    LPUART1_writeText("Transfer Busy"); break;
@@ -309,7 +284,7 @@ void executeCommand( uint8_t * cmd ){
     	  }
     	  break;
       case 'p': // Send last voltage and sense reading for all channels
-    	  readVCdata();
+    	  readVCdata(pacAddress);
     	  break;
       case 'u':
     	  switch(cmd[1]){
@@ -348,6 +323,37 @@ void executeCommand( uint8_t * cmd ){
     }else{
     	LPUART1_writeText(":OK\r\n");
     }
+}
+void findI2CDevices(){
+
+	uint8_t addr;
+	uint8_t tmp;
+	LPUART1_writeText("I2C>");
+	/* Clear the address and bytes to send spot, then fill them in*/
+	for( addr=0x01;addr<127;addr++){
+		if( addr%16==0)
+			LPUART1_writeText("\r\nI2C>");
+		//
+		switch( I2C1_PokeDevice(addr) ){
+			case 0x00:
+				LPUART1_writeByte('.'); // Show some progress?
+				break;
+			case 0x01:
+				LPUART1_writeHexWord(addr);
+				tmp++;
+				break;
+			case ERROR_I2C_TIMEOUT:
+				LPUART1_writeText(":Time Out");
+				addr=0x8F;//Stop searching
+				break;
+		}
+
+		delay = 30; // wait a bit
+		while(delay!=0); // 30ms delay
+	}
+	LPUART1_writeText("\r\nI2C>Found ");
+	LPUART1_writeHexWord(tmp);
+	LPUART1_writeText(" devices\r\n");
 }
 uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
 	uint16_t value=0x00;

@@ -1,7 +1,5 @@
 # General Info
 
 ## Troubleshooting
-* Measurement for current is max value
+* Measurement for current is max value or voltage to low
   * Check soldering of the shunt resistor
-* Meausurement for voltage is way to low
-  * No idea, haven't fixed that one yet

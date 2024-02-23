@@ -35,7 +35,7 @@ void configure_IO(void);
 void executeCommand( uint8_t * cmd );
 
 // PAC1954
-void readVCdata(void);
+void readVCdata( uint8_t address );
 void readAccumulator( uint8_t acc );
 void readAlertStatus(void);
 void readAlertEnable(void);
@@ -60,6 +60,9 @@ void EXTI4_15_IRQ_handler(void);
 /* Hearbeat */
 #define HEART_ON  GPIOB->ODR |= GPIO_ODR_OD5
 #define HEART_OFF GPIOB->ODR &= ~(GPIO_ODR_OD5)
+
+#define PAC_PWR_DN GPIOB->ODR &= ~(GPIO_ODR_OD0)
+#define PAC_PWR_UP GPIOB->ODR |= GPIO_ODR_OD0
 
 #define OV 0x01
 #define UV 0x02
@@ -98,6 +101,7 @@ void EXTI4_15_IRQ_handler(void);
 
 #define PAC_FOUND 0x01
 #define PAC_REFRESHED 0x02
+#define PAC_NAK 0x03
 
 #ifdef __cplusplus
 }
