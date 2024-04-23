@@ -7,12 +7,35 @@
     </telnet>
     <taskmanager id="pm">tmscripts\pm.xml</taskmanager>
   </settings>
+  <rtvals>
+    <unit base="s">
+      <step cnt="60">m</step>
+      <step cnt="60">h</step>
+    </unit>
+    <unit base="mA">
+      <level div="1000" from="1500">A</level>
+    </unit>
+    <unit base="mW">
+      <level div="1000" from="1500">W</level>
+    </unit>
+    <unit base="Wh">
+      <level div="1000">kWh</level>
+    </unit>
+    <unit base="mWh">
+      <level div="1000">Wh</level>
+      <level div="1000">kWh</level>
+    </unit>
+  </rtvals>
   <streams>
     <!-- Defining the various streams that need to be read -->
     <stream id="powmon" type="serial">
       <eol>crlf</eol>
       <port>COM9</port>
       <serialsettings>19200,8,1,none</serialsettings>
+    </stream>
+    <stream id="test" type="tcp">
+      <eol>crlf</eol>
+      <address>localhost:4001</address>
     </stream>
   </streams>
   <paths>
@@ -22,7 +45,15 @@
     <sqlite id="power" path="C:\local_home\GIT\dcafs\db\power.sqlite">
       <flush age="30s" batchsize="30"/>
       <idleclose>-1</idleclose>
-      <table name="measu">
+      <table name="out1">
+        <utcnow>timestamp</utcnow>
+        <real rtval="o1_voltage">voltage</real>
+        <real rtval="o1_current">current</real>
+        <real rtval="o1_power">power</real>
+        <real rtval="o1_period">period</real>
+        <real rtval="o1_energy">energy</real>
+      </table>
+      <table name="out2">
         <utcnow>timestamp</utcnow>
         <real rtval="o2_voltage">voltage</real>
         <real rtval="o2_current">current</real>
@@ -30,6 +61,29 @@
         <real rtval="o2_period">period</real>
         <real rtval="o2_energy">energy</real>
       </table>
+      <table name="out3">
+        <utcnow>timestamp</utcnow>
+        <real rtval="o3_voltage">voltage</real>
+        <real rtval="o3_current">current</real>
+        <real rtval="o3_power">power</real>
+        <real rtval="o3_period">period</real>
+        <real rtval="o3_energy">energy</real>
+      </table>
+      <table name="out4">
+        <utcnow>timestamp</utcnow>
+        <real rtval="o4_voltage">voltage</real>
+        <real rtval="o4_current">current</real>
+        <real rtval="o4_power">power</real>
+        <real rtval="o4_period">period</real>
+        <real rtval="o4_energy">energy</real>
+      </table>
     </sqlite>
   </databases>
+  <!--<matrix pass="29IKntxwPgxT" user="@esw1:matrix.org">
+    <server>matrix-client.matrix.org</server>
+    <room id="r1">
+      <url>!PKPNTPclVyZpsBdFon:matrix.org</url>
+      <entering>ESW C1 reporting in</entering>
+    </room>
+  </matrix>-->
 </dcafs>
