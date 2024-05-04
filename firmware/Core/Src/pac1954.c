@@ -35,12 +35,15 @@ uint8_t PAC1954_readVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur
 	uint16_t recBuffer[PAC_CHANNELS*2];
 	uint8_t result = I2C1_Read16bitData( address, PAC1954_VBUSN_REG, PAC_CHANNELS*2,recBuffer);
 	if( result == I2C_OK ){
-		// The order of the sense pins doesn't match the sequence on the board...
-		// This will be fixed client side.
-		for( uint8_t a=0;a<4;a++){
-			lastVoltCur[a].voltage = recBuffer[a];
-			lastVoltCur[a].current = recBuffer[a+4];
-		}
+		// The order of the sense pins doesn't match the sequence on the board so change it
+		lastVoltCur[0].voltage = recBuffer[2];
+		lastVoltCur[0].current = recBuffer[2+4];
+		lastVoltCur[1].voltage = recBuffer[3];
+		lastVoltCur[1].current = recBuffer[3+4];
+		lastVoltCur[2].voltage = recBuffer[0];
+		lastVoltCur[2].current = recBuffer[0+4];
+		lastVoltCur[3].voltage = recBuffer[1];
+		lastVoltCur[3].current = recBuffer[1+4];
 	}
 	return result;
 }
@@ -54,12 +57,15 @@ uint8_t PAC1954_readAvgVoltageCurrent( uint8_t address, VoltageCurrent *lastVolt
 	uint16_t recBuffer[PAC_CHANNELS*2];
 	uint8_t result = I2C1_Read16bitData( address, PAC1954_VBUSN_AVG_REG, PAC_CHANNELS*2,recBuffer);
 	if( result == I2C_OK ){
-		// The order of the sense pins doesn't match the sequence on the board...
-		// This will be fixed client side.
-		for( uint8_t a=0;a<4;a++){
-			lastVoltCur[a].voltage = recBuffer[a];
-			lastVoltCur[a].current = recBuffer[a+4];
-		}
+		// The order of the sense pins doesn't match the sequence on the board so change it
+		lastVoltCur[0].voltage = recBuffer[2];
+		lastVoltCur[0].current = recBuffer[2+4];
+		lastVoltCur[1].voltage = recBuffer[3];
+		lastVoltCur[1].current = recBuffer[3+4];
+		lastVoltCur[2].voltage = recBuffer[0];
+		lastVoltCur[2].current = recBuffer[0+4];
+		lastVoltCur[3].voltage = recBuffer[1];
+		lastVoltCur[3].current = recBuffer[1+4];
 	}
 	return result;
 }
