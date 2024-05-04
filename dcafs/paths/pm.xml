@@ -20,21 +20,21 @@
                 <op scale="1">i8=i8*((100/rsense)/65535)</op>
             </math>
             <store>
-                <real group="o3" i="1" unit="V">voltage</real>
-                <real group="o3" i="2" unit="mA">current</real>
-                <real group="o3" o="(o3_voltage*o3_current)" unit="mW" scale="2">power</real>
-
-                <real group="o4" i="3" unit="V">voltage</real>
-                <real group="o4" i="4" unit="mA">current</real>
-                <real group="o4" o="(o4_voltage*o4_current)" unit="mW" scale="2">power</real>
-
-                <real group="o1" i="5" unit="V">voltage</real>
-                <real group="o1" i="6" unit="mA">current</real>
+                <real group="o1" i="1" unit="V">voltage</real>
+                <real group="o1" i="2" unit="mA">current</real>
                 <real group="o1" o="(o1_voltage*o1_current)" unit="mW" scale="2">power</real>
 
-                <real group="o2" i="7" unit="V">voltage</real>
-                <real group="o2" i="8" unit="mA">current</real>
-                <real group="o2" o="(o2_voltage*o2_current)" unit="mW" scale="2">power</real>
+                <real group="o2" i="3" unit="V">voltage</real>
+                <real group="o2" i="4" unit="mA">current</real>
+                <real group="o4" o="(o2_voltage*o2_current)" unit="mW" scale="2">power</real>
+
+                <real group="o3" i="5" unit="V">voltage</real>
+                <real group="o3" i="6" unit="mA">current</real>
+                <real group="o3" o="(o3_voltage*o3_current)" unit="mW" scale="2">power</real>
+
+                <real group="o4" i="7" unit="V">voltage</real>
+                <real group="o4" i="8" unit="mA">current</real>
+                <real group="o4" o="(o4_voltage*o4_current)" unit="mW" scale="2">power</real>
             </store>
         </if>
         <!-- Over voltage limits -->
@@ -62,10 +62,10 @@
                 <op scale="3">i4=(i4/65535)*32</op>
             </math>
             <store>
-                <real group="o3" i="1" unit="V">UVL</real>
-                <real group="o4" i="2" unit="V">UVL</real>
-                <real group="o1" i="3" unit="V">UVL</real>
-                <real group="o2" i="4" unit="V">UVL</real>
+                <real group="o1" i="1" unit="V">UVL</real>
+                <real group="o2" i="2" unit="V">UVL</real>
+                <real group="o3" i="3" unit="V">UVL</real>
+                <real group="o4" i="4" unit="V">UVL</real>
             </store>
         </if>
         <!-- Process the Overcurrent limit message -->
@@ -79,10 +79,10 @@
                 <op scale="3">i4=(i4/65535)*(1/rsense)</op>
             </math>
             <store>
-                <real group="o3" i="1" unit="A">OCL</real>
-                <real group="o4" i="2" unit="A">OCL</real>
-                <real group="o1" i="3" unit="A">OCL</real>
-                <real group="o2" i="4" unit="A">OCL</real>
+                <real group="o1" i="1" unit="A">OCL</real>
+                <real group="o2" i="2" unit="A">OCL</real>
+                <real group="o3" i="3" unit="A">OCL</real>
+                <real group="o4" i="4" unit="A">OCL</real>
             </store>
         </if>
         <!-- Process the Undercurrent limit message -->
@@ -96,43 +96,61 @@
                 <op scale="3">i4=(i4/65535)*(1/rsense)</op>
             </math>
             <store>
-                <real group="o3" i="1" unit="A">UCL</real>
-                <real group="o4" i="2" unit="A">UCL</real>
-                <real group="o1" i="3" unit="A">UCL</real>
-                <real group="o2" i="4" unit="A">UCL</real>
+                <real group="o1" i="1" unit="A">UCL</real>
+                <real group="o2" i="2" unit="A">UCL</real>
+                <real group="o3" i="3" unit="A">UCL</real>
+                <real group="o4" i="4" unit="A">UCL</real>
             </store>
         </if>
         <!-- Process the Accumulater & count message -->
         <if start="AC:0x1D">
             <!-- AC:0x1D;1;0x02C83245CAF200;0x0048D900 -->
-            <math>
-                <rsense>0.025</rsense><!-- Sense resistor value in ohms -->
-                <op scale="1">i3=i3/1024</op>  <!-- Because 1024SPS, divide to go to [s] -->
-                <op scale="6">i2=i2/2^30</op>  <!-- Denominator -->
-                <op scale="6">i2=(3.2/rsense)*i2/(1024*3600)*1000</op> <!-- i1=(3.2/0.025)*i2*(1/1024)*(1/3600) -->
-            </math>
             <if at1="1">
-                <store db="power:out3">
-                    <real  group="o3" i="2" scale="3" unit="mWh">energy</real>
-                    <real  group="o3" i="3" unit="s">period</real>
-                </store>
-            </if>
-            <if at1="2">
-                <store db="power:out4">
-                    <real  group="o4" i="2" scale="3" unit="mWh">energy</real>
-                    <real  group="o4" i="3" unit="s">period</real>
-                </store>
-            </if>
-            <if at1="3">
+			    <math>
+					<rsense>0.1</rsense><!-- Sense resistor value in ohms -->
+					<op scale="1">i3=i3/1024</op>  <!-- Because 1024SPS, divide to go to [s] -->
+					<op scale="6">i2=i2/2^30</op>  <!-- Denominator -->
+					<op scale="6">i2=(3.2/rsense)*i2/(1024*3600)*1000</op> <!-- i1=(3.2/0.025)*i2*(1/1024)*(1/3600) -->
+				</math>
                 <store db="power:out1">
                     <real  group="o1" i="2" scale="3" unit="mWh">energy</real>
                     <real  group="o1" i="3" unit="s">period</real>
                 </store>
             </if>
-            <if at1="4">
-                <store  db="power:out2">
+            <if at1="2">
+				<math>
+					<rsense>0.05</rsense><!-- Sense resistor value in ohms -->
+					<op scale="1">i3=i3/1024</op>  <!-- Because 1024SPS, divide to go to [s] -->
+					<op scale="6">i2=i2/2^30</op>  <!-- Denominator -->
+					<op scale="6">i2=(3.2/rsense)*i2/(1024*3600)*1000</op> <!-- i1=(3.2/0.025)*i2*(1/1024)*(1/3600) -->
+				</math>
+                <store db="power:out2">
                     <real  group="o2" i="2" scale="3" unit="mWh">energy</real>
                     <real  group="o2" i="3" unit="s">period</real>
+                </store>
+            </if>
+            <if at1="3">
+				<math>
+					<rsense>0.025</rsense><!-- Sense resistor value in ohms -->
+					<op scale="1">i3=i3/1024</op>  <!-- Because 1024SPS, divide to go to [s] -->
+					<op scale="6">i2=i2/2^30</op>  <!-- Denominator -->
+					<op scale="6">i2=(3.2/rsense)*i2/(1024*3600)*1000</op> <!-- i1=(3.2/0.025)*i2*(1/1024)*(1/3600) -->
+				</math>
+                <store db="power:out3">
+                    <real  group="o3" i="2" scale="3" unit="mWh">energy</real>
+                    <real  group="o3" i="3" unit="s">period</real>
+                </store>
+            </if>
+            <if at1="4">
+				<math>
+					<rsense>0.025</rsense><!-- Sense resistor value in ohms -->
+					<op scale="1">i3=i3/1024</op>  <!-- Because 1024SPS, divide to go to [s] -->
+					<op scale="6">i2=i2/2^30</op>  <!-- Denominator -->
+					<op scale="6">i2=(3.2/rsense)*i2/(1024*3600)*1000</op> <!-- i1=(3.2/0.025)*i2*(1/1024)*(1/3600) -->
+				</math>
+                <store  db="power:out4">
+                    <real  group="o4" i="2" scale="3" unit="mWh">energy</real>
+                    <real  group="o4" i="3" unit="s">period</real>
                 </store>
             </if>
         </if>
