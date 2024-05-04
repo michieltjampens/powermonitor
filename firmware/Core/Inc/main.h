@@ -58,8 +58,8 @@ uint8_t storeSettings(void);
 void EXTI4_15_IRQ_handler(void);
 /* Private defines -----------------------------------------------------------*/
 /* Hearbeat */
-#define HEART_ON  GPIOB->ODR |= GPIO_ODR_OD5
-#define HEART_OFF GPIOB->ODR &= ~(GPIO_ODR_OD5)
+#define HEART_ON  GPIOA->ODR |= GPIO_ODR_OD3
+#define HEART_OFF GPIOA->ODR &= ~(GPIO_ODR_OD3)
 
 #define PAC_PWR_DN GPIOB->ODR &= ~(GPIO_ODR_OD0)
 #define PAC_PWR_UP GPIOB->ODR |= GPIO_ODR_OD0

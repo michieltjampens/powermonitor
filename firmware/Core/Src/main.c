@@ -21,6 +21,7 @@ PacSettings *GLOBAL_settings_ptr = &pacSettings;
 static VoltageCurrent lastVoltCur[PAC_CHANNELS];
 
 PacChannel chSettings[PAC_CHANNELS];
+uint8_t order[4]={3,4,1,2};
 
 int main(void){
 	uint8_t result;
@@ -147,7 +148,7 @@ void init(void){
 
     /* Read the settings from the internal E²PROM */
     //loadSettings();
-    pacAddress = 0x1D;//pacSettings.pacAddress; // Get the read address
+    pacAddress = 0x1C;//pacSettings.pacAddress; // Get the read address
 
     // Check if I2C hardware is found
     LPUART1_writeText("I>PAC1954:");
@@ -200,12 +201,12 @@ void configure_IO(void){
   NVIC_EnableIRQ(EXTI4_15_IRQn); // Actually enable it
 
   /* OUTPUTS */
-  /* Select output mode (01) on GPIOB pin 5 */
+  /* Select output mode (01) */
   /*
-    PB5 = Heart beat led
+    PA3 = Heart beat led
     PB0 = PAC1954 PWRDN
   */
-  GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE5))| (GPIO_MODER_MODE5_0);
+  GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODER_MODE3))| (GPIO_MODER_MODE3_0);
   GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE0))| (GPIO_MODER_MODE0_0);
 
 }
@@ -377,9 +378,10 @@ uint8_t applyLimit( uint8_t reg, uint8_t chn, uint8_t * lmt){
 			case OP: chSettings[chn-1].OP_lim = value; break;
 		}
     }else{
-    	return 0x23; // return that the given ch was incorrect
+    	return 0x23; // return that the given chn was incorrect
     }
 
+    chn = order[chn-1]; // Order of connector doesn't match PAC1954, so fix it.
 	uint32_t macro;
 	switch(reg){
 		case UV:
@@ -443,6 +445,7 @@ void readVCdata(uint8_t address){
 void readAccumulator( uint8_t acc ){
 	uint8_t buffer[8];
 
+	acc = order[acc-1]; // Connector order doesn't match PAC1954 order, so fix it
 	// Read the accumulator data
 	uint8_t res = I2C1_Read8bitData( pacAddress, 0x02+acc , 7,buffer);
 	if( res==I2C_OK ){
@@ -498,45 +501,45 @@ void readAlertEnable(){
 void readOVLimits(){
 	LPUART1_writeText("OVL:");
 	LPUART1_writeHexWord(pacAddress);
-	for( uint8_t a=1;a<5;a++ ){
+	for( uint8_t a=0;a<4;a++ ){
 		LPUART1_writeByte(';');
-		LPUART1_writeHexWord( PAC1954_readOVlimit( pacAddress, a ) );
+		LPUART1_writeHexWord( PAC1954_readOVlimit( pacAddress, order[a] ) );
 	}
 	LPUART1_writeText("\r\n");
 }
 void readUVLimits(){
 	LPUART1_writeText("UVL:");
 	LPUART1_writeHexWord(pacAddress);
-	for( uint8_t a=1;a<5;a++ ){
+	for( uint8_t a=0;a<4;a++ ){
 		LPUART1_writeByte(';');
-		LPUART1_writeHexWord( PAC1954_readUVlimit( pacAddress, a ) );
+		LPUART1_writeHexWord( PAC1954_readUVlimit( pacAddress, order[a] ) );
 	}
 	LPUART1_writeText("\r\n");
 }
 void readUCLimits(){
 	LPUART1_writeText("UCL:");
 	LPUART1_writeHexWord(pacAddress);
-	for( uint8_t a=1;a<5;a++ ){
+	for( uint8_t a=0;a<4;a++ ){
 		LPUART1_writeByte(';');
-		LPUART1_writeHexWord( PAC1954_readUClimit( pacAddress, a ) );
+		LPUART1_writeHexWord( PAC1954_readUClimit( pacAddress, order[a] ) );
 	}
 	LPUART1_writeText("\r\n");
 }
 void readOCLimits(){
 	LPUART1_writeText("OCL:");
 	LPUART1_writeHexWord(pacAddress);
-	for( uint8_t a=1;a<5;a++ ){
+	for( uint8_t a=0;a<4;a++ ){
 		LPUART1_writeByte(';');
-		LPUART1_writeHexWord( PAC1954_readOClimit( pacAddress, a ) );
+		LPUART1_writeHexWord( PAC1954_readOClimit( pacAddress, order[a] ) );
 	}
 	LPUART1_writeText("\r\n");
 }
 void readOPLimits(){
 	LPUART1_writeText("OPL:");
 	LPUART1_writeHexWord(pacAddress);
-	for( uint8_t a=1;a<5;a++ ){
+	for( uint8_t a=0;a<4;a++ ){
 		LPUART1_writeByte(';');
-		LPUART1_writeHexWord( PAC1954_readOPlimit( pacAddress, a ) );
+		LPUART1_writeHexWord( PAC1954_readOPlimit( pacAddress, order[a] ) );
 	}
 	LPUART1_writeText("\r\n");
 }
@@ -642,7 +645,7 @@ void SysTick_Handler(void){
     if( heartBeats == 1000 ){ // Every second
     	HEART_ON;
     	heartBeats=0;
-    }else if( heartBeats == 50){ // Stay on for 50ms
+    }else if( heartBeats == 2){ // Stay on for 2ms
     	HEART_OFF;
     }
 }
