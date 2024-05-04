@@ -7,32 +7,30 @@
 
     </tasksets>
     <tasks>
-      <!-- Note that the order of hardware outputs doesn't match the order on the board -->
-      <!-- So this is used to make that conversion -->
       <!-- Out 1 -->
-      <task id="ov1" output="stream:powmon">sov3:{mint:i0*(65535/32)}</task>
-      <task id="op1" output="stream:powmon">sop3:{mint:i0*(65535/32)}</task>
-      <task id="uv1" output="stream:powmon">suv3:{mint:i0*(65535/32)}</task>
-      <task id="oc1" output="stream:powmon">soc3:{mint:i0*(65535/(1/0.025))}</task>
-      <task id="uc1" output="stream:powmon">suc3:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="ov1" output="stream:powmon">sov1:{mint:i0*(65535/32)}</task>
+      <task id="op1" output="stream:powmon">sop1:{mint:i0*(65535/32)}</task>
+      <task id="uv1" output="stream:powmon">suv1:{mint:i0*(65535/32)}</task>
+      <task id="oc1" output="stream:powmon">soc1:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="uc1" output="stream:powmon">suc1:{mint:i0*(65535/(1/0.025))}</task>
       <!-- Out 2 -->
-      <task id="ov2" output="stream:powmon">sov4:{mint:i0*(65535/32)}</task>
-      <task id="op2" output="stream:powmon">sop4:{mint:i0*(65535/32)}</task>
-      <task id="uv2" output="stream:powmon">suv4:{mint:i0*(65535/32)}</task>
-      <task id="oc2" output="stream:powmon">soc4:{mint:i0*(65535/(1/0.025))}</task>
-      <task id="uc2" output="stream:powmon">suc4:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="ov2" output="stream:powmon">sov2:{mint:i0*(65535/32)}</task>
+      <task id="op2" output="stream:powmon">sop2:{mint:i0*(65535/32)}</task>
+      <task id="uv2" output="stream:powmon">suv2:{mint:i0*(65535/32)}</task>
+      <task id="oc2" output="stream:powmon">soc2:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="uc2" output="stream:powmon">suc2:{mint:i0*(65535/(1/0.025))}</task>
       <!-- Out 3 -->
-      <task id="ov3" output="stream:powmon">sov1:{mint:i0*(65535/32)}</task>
-      <task id="op3" output="stream:powmon">sop1:{mint:i0*(65535/32)}</task>
-      <task id="uv3" output="stream:powmon">suv1:{mint:i0*(65535/32)}</task>
-      <task id="oc3" output="stream:powmon">soc1:{mint:i0*(65535/(1/0.025))}</task>
-      <task id="uc3" output="stream:powmon">suc1:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="ov3" output="stream:powmon">sov3:{mint:i0*(65535/32)}</task>
+      <task id="op3" output="stream:powmon">sop3:{mint:i0*(65535/32)}</task>
+      <task id="uv3" output="stream:powmon">suv3:{mint:i0*(65535/32)}</task>
+      <task id="oc3" output="stream:powmon">soc3:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="uc3" output="stream:powmon">suc3:{mint:i0*(65535/(1/0.025))}</task>
       <!-- Out 4 -->
-      <task id="ov4" output="stream:powmon">sov2:{mint:i0*(65535/32)}</task>
-      <task id="op4" output="stream:powmon">sov2:{mint:i0*(65535/32)}</task>
-      <task id="uv4" output="stream:powmon">suv2:{mint:i0*(65535/32)}</task>
-      <task id="oc4" output="stream:powmon">soc2:{mint:i0*(65535/(1/0.025))}</task>
-      <task id="uc4" output="stream:powmon">suc2:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="ov4" output="stream:powmon">sov4:{mint:i0*(65535/32)}</task>
+      <task id="op4" output="stream:powmon">sov4:{mint:i0*(65535/32)}</task>
+      <task id="uv4" output="stream:powmon">suv4:{mint:i0*(65535/32)}</task>
+      <task id="oc4" output="stream:powmon">soc4:{mint:i0*(65535/(1/0.025))}</task>
+      <task id="uc4" output="stream:powmon">suc4:{mint:i0*(65535/(1/0.025))}</task>
       <!-- Request energy data every 10min, delay is to give board time to process -->
       <task output="stream:powmon" interval="10m">ac1</task>
       <task output="stream:powmon" interval="50ms,10m">ac2</task>
