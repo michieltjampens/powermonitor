@@ -30,19 +30,15 @@
     <!-- Defining the various streams that need to be read -->
     <stream id="powmon" type="serial">
       <eol>crlf</eol>
-      <port>COM9</port>
+      <port>COM8</port>
       <serialsettings>19200,8,1,none</serialsettings>
-    </stream>
-    <stream id="test" type="tcp">
-      <eol>crlf</eol>
-      <address>localhost:4001</address>
     </stream>
   </streams>
   <paths>
     <path delimiter=";" id="powmon" import="paths\pm.xml" src="raw:powmon"/>
   </paths>
   <databases>
-    <sqlite id="power" path="C:\local_home\GIT\dcafs\db\power.sqlite">
+    <sqlite id="power" path="db\power.sqlite">
       <flush age="30s" batchsize="30"/>
       <idleclose>-1</idleclose>
       <table name="out1">
@@ -79,11 +75,4 @@
       </table>
     </sqlite>
   </databases>
-  <!--<matrix pass="29IKntxwPgxT" user="@esw1:matrix.org">
-    <server>matrix-client.matrix.org</server>
-    <room id="r1">
-      <url>!PKPNTPclVyZpsBdFon:matrix.org</url>
-      <entering>ESW C1 reporting in</entering>
-    </room>
-  </matrix>-->
 </dcafs>
