@@ -43,6 +43,14 @@
 *.idb
 *.pdb
 /firmware/Debug/
+/dcafs/logs/
+/dcafs/raw/
+/dcafs/db/
+
+
+# Temp diptrace
+*.dch~
+*.dip~
 
 # Kernel Module Compile Results
 *.mod*
