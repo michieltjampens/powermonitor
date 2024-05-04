@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <dcafs>
     <path delimiter=";" id="pm">
-        <if start="VC:0x1D">
+        <if start="VC:0x1C">
             <math>
                 <rsense>0.025</rsense>
                 <!-- Voltage FSR is 32V -->
@@ -26,7 +26,7 @@
 
                 <real group="o2" i="3" unit="V">voltage</real>
                 <real group="o2" i="4" unit="mA">current</real>
-                <real group="o4" o="(o2_voltage*o2_current)" unit="mW" scale="2">power</real>
+                <real group="o2" o="(o2_voltage*o2_current)" unit="mW" scale="2">power</real>
 
                 <real group="o3" i="5" unit="V">voltage</real>
                 <real group="o3" i="6" unit="mA">current</real>
@@ -38,7 +38,7 @@
             </store>
         </if>
         <!-- Over voltage limits -->
-        <if start="OVL:0x1D">
+        <if start="OVL:0x1C">
             <!-- OVL:0x1D;0x00;0x00;0x2800;0x00 -->
             <math>
                 <op scale="3">i1=(i1/65535)*32</op>
@@ -54,7 +54,7 @@
             </store>
         </if>
         <!-- Process the Undervoltage limit message -->
-        <if start="UVL:0x1D">
+        <if start="UVL:0x1C">
             <math>
                 <op scale="3">i1=(i1/65535)*32</op>
                 <op scale="3">i2=(i2/65535)*32</op>
@@ -70,7 +70,7 @@
         </if>
         <!-- Process the Overcurrent limit message -->
         <!-- Rsense = 0.025  Ohm -->
-        <if start="OCL:0x1D">
+        <if start="OCL:0x1C">
             <math>
                 <rsense>0.025</rsense><!-- Sense resistor value in ohms -->
                 <op scale="3">i1=(i1/65535)*(1/rsense)</op>
@@ -87,7 +87,7 @@
         </if>
         <!-- Process the Undercurrent limit message -->
         <!-- Rsense = 0.025 Ohm -->
-        <if start="UCL:0x1D">
+        <if start="UCL:0x1C">
             <math>
                 <rsense>0.025</rsense><!-- Sense resistor value in ohms -->
                 <op scale="3">i1=(i1/65535)*(1/rsense)</op>
@@ -103,7 +103,7 @@
             </store>
         </if>
         <!-- Process the Accumulater & count message -->
-        <if start="AC:0x1D">
+        <if start="AC:0x1C">
             <!-- AC:0x1D;1;0x02C83245CAF200;0x0048D900 -->
             <if at1="1">
 			    <math>
