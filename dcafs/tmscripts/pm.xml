@@ -4,7 +4,12 @@
 
     <!-- Tasks are single commands to execute -->
     <tasksets>
-
+		<taskset id="ac" type="step">
+			<task output="stream:powmon" reply="ac1:OK">ac1</task>
+		    <task output="stream:powmon" reply="ac2:OK">ac2</task>
+			<task output="stream:powmon" reply="ac3:OK">ac3</task>
+			<task output="stream:powmon" reply="ac4:OK">ac4</task>
+		</taskset>
     </tasksets>
     <tasks>
       <!-- Out 1 -->
@@ -31,11 +36,9 @@
       <task id="uv4" output="stream:powmon">suv4:{mint:i0*(65535/32)}</task>
       <task id="oc4" output="stream:powmon">soc4:{mint:i0*(65535/(1/0.025))}</task>
       <task id="uc4" output="stream:powmon">suc4:{mint:i0*(65535/(1/0.025))}</task>
-      <!-- Request energy data every 10min, delay is to give board time to process -->
-      <task output="stream:powmon" interval="10m">ac1</task>
-      <task output="stream:powmon" interval="50ms,10m">ac2</task>
-      <task output="stream:powmon" interval="100ms,10m">ac3</task>
-      <task output="stream:powmon" interval="150ms,10m">ac4</task>
+      
+	  <!-- Request energy data every 5min -->
+      <task output="manager" interval="5s,5m">start:ac</task>
     </tasks>
   </tasklist>
 </dcafs>
