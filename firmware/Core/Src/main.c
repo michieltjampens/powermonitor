@@ -445,9 +445,8 @@ void readVCdata(uint8_t address){
 void readAccumulator( uint8_t acc ){
 	uint8_t buffer[8];
 
-	acc = order[acc-1]; // Connector order doesn't match PAC1954 order, so fix it
 	// Read the accumulator data
-	uint8_t res = I2C1_Read8bitData( pacAddress, 0x02+acc , 7,buffer);
+	uint8_t res = I2C1_Read8bitData( pacAddress, 0x02+order[acc-1] , 7,buffer);
 	if( res==I2C_OK ){
 		LPUART1_writeText("AC:");
 		LPUART1_writeHexWord(pacAddress);
