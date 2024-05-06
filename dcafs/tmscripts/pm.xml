@@ -39,6 +39,7 @@
       
 	  <!-- Request energy data every 5min -->
       <task output="manager" interval="5s,5m">start:ac</task>
+	  <task output="stream:powmon" interval="1s,5s">p</task>
     </tasks>
   </tasklist>
 </dcafs>

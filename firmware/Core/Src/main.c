@@ -24,7 +24,7 @@ PacChannel chSettings[PAC_CHANNELS];
 uint8_t order[4]={3,4,1,2};
 
 int main(void){
-	uint8_t result;
+
     /*!< At this stage the microcontroller clock setting is already configured,
          this is done through SystemInit() function which is called from startup
          file (startup_stm32l0xx.s) before to branch to application main.
@@ -50,11 +50,11 @@ int main(void){
 			LPUART1_writeText("\r\n");
 			error=0;
 		}
-		if( check>=220 && pacState==PAC_REFRESHED){ // Minimum of 10ms between refresh and readout
+		if( check>3 && pacState==PAC_REFRESHED){ // Minimum of 10ms between refresh and readout
 			readVCdata(pacAddress);
-			check=0; // Reset counter
+			check=0; // Clear counter
 		}
-		if( check>=218 && pacState==PAC_FOUND){
+		/*if( check>=218 && pacState==PAC_FOUND){
 			result = PAC1954_doRefreshV(pacAddress);
 			if(  result == I2C_OK){
 				pacState=PAC_REFRESHED;
@@ -63,7 +63,7 @@ int main(void){
 				LPUART1_writeHexWord(result);
 				LPUART1_writeText("\r\n");
 			}
-		}
+		}*/
 		if( LPUART1_hasCmd() ){
 			LPUART1_Transfer_Buffer();
 		}
@@ -282,7 +282,15 @@ void executeCommand( uint8_t * cmd ){
     	  }
     	  break;
       case 'p': // Send last voltage and sense reading for all channels
-    	  readVCdata(pacAddress);
+    	  uint8_t result = PAC1954_doRefreshV(pacAddress);
+    	  check=1;
+    	  if(  result == I2C_OK){
+    		  pacState=PAC_REFRESHED;
+    	  }else{
+    		  LPUART1_writeText("I2C:Refresh Error -> ");
+    		  LPUART1_writeHexWord(result);
+    		  LPUART1_writeText("\r\n");
+    	  }
     	  break;
       case 'u':
     	  switch(cmd[1]){
@@ -628,7 +636,7 @@ void SysTick_Handler(void){
     Tick++;
 
 	if( Tick % 10 == 0){
-		if( pacState >= PAC_FOUND){
+		if( pacState >= PAC_FOUND && check != 0 ){
 			check++;
 		}
 	}
