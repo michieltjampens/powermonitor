@@ -64,6 +64,7 @@ int main(void){
 				LPUART1_writeText("\r\n");
 			}
 		}*/
+		LPUART1_check_dma();		// Check if we got data to send
 		if( LPUART1_hasCmd() ){
 			LPUART1_Transfer_Buffer();
 		}
