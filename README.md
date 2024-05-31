@@ -23,7 +23,7 @@ Working either standalone with data stored on onboard flash or realtime by sendi
 - Flash via spi -> store and download data
 - PAC Alerts
 - RTC
-- DMA reading I2C and writing UART
+- DMA reading I2C
 
 ## Repo folders content
 ### board
