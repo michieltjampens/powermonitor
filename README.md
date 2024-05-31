@@ -13,11 +13,11 @@ Working either standalone with data stored on onboard flash or realtime by sendi
 ## Progress
 - Currently testing rev1
   - Replaced the dcdc with one that's easier to solder (and a bit cheaper).
+  - Updated firmware to use DMA for uart output.
 - Designing rev2
-  - Replace V3MODS with connector
-  - Added USB-C with PD support
-  - Added CP2102N for UART to usb
-  - Replaced STML040K with STML010k because mem already full without usb pd stuff
+  - Replace V3MODS with connector and CP2102N for uart to usb.
+  - Added USB-C with PD support using popular FUSB302B.
+  - Replaced STML010K4 with STML010k8 because flash mem already 80% used without usb pd stuff.
      
 ## Todo
 - Flash via spi -> store and download data
@@ -40,4 +40,4 @@ Contains the relevant datasheets
 Contains the files needed to read/process the data from the board with [dcafs](https://github.com/michieltjampens/dcafs).
 
 ### firmware
-Contains the ST CubeIDE project with bare-metal c code.
+Contains the ST CubeIDE project with c code without using LL nor HAL.
