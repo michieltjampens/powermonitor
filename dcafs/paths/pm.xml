@@ -24,7 +24,7 @@
                 <op scale="2">i7=i7*(32/65535)</op>
                 <op scale="1">i8=i8*((100/rsense4)/65535)</op>
             </math>
-            <store>
+            <store db="power:out1,out2,out3">
                 <real group="o1" i="1" unit="V">voltage</real>
                 <real group="o1" i="2" unit="mA">current</real>
                 <real group="o1" o="(o1_voltage*o1_current)" unit="mW" scale="2">power</real>
