@@ -115,7 +115,7 @@ void LPUART1_DMA_Init(){
     // Need to use channel 2 because channel 1 only services ADC
     DMA1_CSELR->CSELR = 0x00000050;		// Select LPUART_TX according to page 218 of RM
 
-    DMA1_Channel2->CPAR = (uint32_t)&(LPUART1->TDR);		// Set the destination (works)
+    DMA1_Channel2->CPAR = (uint32_t)&(LPUART1->TDR);	 // Set the destination (works)
     DMA1_Channel2->CMAR = (uint32_t)dmaStart_LPUART1;    // Set the start point of the buffer
     DMA1_Channel2->CCR = DMA_CCR_MINC 		// Memory increment
     					| DMA_CCR_DIR 		// Read from memory
@@ -154,7 +154,7 @@ void LPUART1_check_dma(){
 	}
 	DMA1_Channel2->CNDTR = todo;
 	dmaStart_LPUART1 = newStart_LPUART1; // Update the start to where the dma will end
-	lpuart_todo -= todo; 			 // subtract the portion from the total
+	lpuart_todo -= todo; 			     // subtract the portion from the total
 
 	SET_BIT(DMA1_Channel2->CCR,DMA_CCR_EN); // Start it again
 }
@@ -196,7 +196,7 @@ void LPUART1_writeNullEndedArray( uint8_t *buffer ){
 }
 void LPUART1_writeHexByteArrayNoPrefix( uint8_t *nrs, uint8_t length ){
 	uint8_t tmp;
-	uint8_t added=length;
+	uint8_t added=2*length;
 
 	while( length != 0x00){
 		tmp = *nrs/16;
