@@ -314,8 +314,11 @@ void executeCommand( uint8_t * cmd ){
     	  	  case 'e': readAlertEnable(); break;
     	  	  case 'c':
     	  		  uint8_t temp=cmd[2]-'0';
-    	  		  if( temp <= PAC_CHANNELS)
+    	  		  if( temp <= PAC_CHANNELS){
     	  		  	  readAccumulator(temp);
+    	  		  }else{
+    	  			ok=0x00;
+    	  		  }
     	  	  	  break;
     	  	  default: ok=0x00;
     	  }
