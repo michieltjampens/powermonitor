@@ -322,8 +322,13 @@ void executeCommand( uint8_t * cmd ){
     	  	  	  break;
     	  	  default: ok=0x00;
     	  }
-
     	  break;
+    	  case 'r': // Refresh
+    		  switch(cmd[1]){
+				  case 'v': PAC1954_doRefreshV(pacAddress); break; // Refresh registers, don't clear
+				  case 'a': PAC1954_doRefresh(pacAddress);  break; // Refresh registers, clear acc
+    		  }
+          break;
       default : ok=0x00; break;
 
     }
