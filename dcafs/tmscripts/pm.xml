@@ -38,8 +38,10 @@
       <task id="uc4" output="stream:powmon">suc4:{mint:i0*(65535/(1/0.025))}</task>
       
 	  <!-- Request energy data every 5min -->
-      <task output="manager" interval="5s,5m">start:ac</task>
-	  <task output="stream:powmon" interval="1s,5s">p</task>
+      <task output="manager" interval="5s,1m">start:ac</task>
+      <task output="stream:powmon" interval="1s,5s">p</task>
+      <task id="reset" output="stream:powmon">ra</task>
+
     </tasks>
   </tasklist>
 </dcafs>
