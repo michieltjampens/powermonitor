@@ -5,6 +5,7 @@
     <!-- Tasks are single commands to execute -->
     <tasksets>
 		<taskset id="ac" type="step">
+            <task output="stream:powmon">rv</task>
 			<task output="stream:powmon" reply="ac1:OK">ac1</task>
 		    <task output="stream:powmon" reply="ac2:OK">ac2</task>
 			<task output="stream:powmon" reply="ac3:OK">ac3</task>
