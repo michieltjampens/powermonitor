@@ -12,18 +12,25 @@
       <step cnt="60">m</step>
       <step cnt="60">h</step>
     </unit>
-    <unit base="mA">
-      <level div="1000" from="1500">A</level>
+    <unit base="A" div="1000">
+      <level           max="1000">uA</level>
+      <level min="0.1" max="1500">mA</level>
+      <level min="1.5"           >A</level>
     </unit>
-    <unit base="mW">
-      <level div="1000" from="1500">W</level>
+    <unit base="V" div="1000">
+      <level           max="1000">uV</level>
+      <level min="0.1" max="1500">mV</level>
+      <level min="1.5"           >V</level>
     </unit>
-    <unit base="Wh">
-      <level div="1000">kWh</level>
+    <unit base="W" div="1000">
+      <level           max="1500">mW</level>
+      <level min="1.5" max="1500">W</level>
+      <level min="1,5"           >kW</level>
     </unit>
-    <unit base="mWh">
-      <level div="1000">Wh</level>
-      <level div="1000">kWh</level>
+    <unit base="Wh" div="1000">
+      <level           max="1000" scale="1" >mWh</level>
+      <level min="1"   max="1500" scale="2" >Wh</level>
+      <level min="1,5"            scale="3" >kWh</level>
     </unit>
   </rtvals>
   <streams>
