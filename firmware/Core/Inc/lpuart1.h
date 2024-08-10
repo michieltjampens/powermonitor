@@ -45,6 +45,8 @@ void LPUART1_check_dma(void);
 #define ERROR_USART_ISR_TC 	 0x21
 #define ERROR_USART_TIMEOUT  0x22
 
+#define USB_VERSION
+
 #define CIRCULAR 200
 
 #define IDLE 	0x01

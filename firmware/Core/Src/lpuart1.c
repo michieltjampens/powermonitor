@@ -48,37 +48,38 @@ void LPUART1_Configure(){
     cmdReady=0;
 }
 void LPUART1_Configure_GPIO(void){
-  /* Enable the peripheral clock of GPIOA */
-  RCC->IOPENR |= RCC_IOPENR_GPIOAEN;
+	/* Enable the peripheral clock of GPIOA */
+	SET_BIT(RCC->IOPENR,RCC_IOPENR_GPIOAEN);
 
-  /* GPIO configuration for USART1 signals */
-  /* (1) Select Alternate Function (AF) mode (b10) on PA0 and PA1 */
-  /* Moder LSB nibble: 1111 -> 1010 */
-  GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODER_MODE0|GPIO_MODER_MODE1))\
-                 | (GPIO_MODER_MODE0_1 | GPIO_MODER_MODE1_1);
-  /* (2) AF4 for LPUSART1 signals, the line is explained in detail below it */
-  GPIOA->AFR[0] = (GPIOA->AFR[0] &~ (0x00000FF0)) | (6 << (0 * 4)) | (6 << (1 * 4));
+	/* GPIO configuration for USART1 signals */
+	/* (1) Select Alternate Function (AF) mode (b10) on PA0 and PA1 */
+	/* Moder LSB nibble: 1111 -> 1010 */
+	MODIFY_REG( GPIOA->MODER, GPIO_MODER_MODE0|GPIO_MODER_MODE1, (0b10 << GPIO_MODER_MODE0_Pos) | (0b10 << GPIO_MODER_MODE1_Pos) );
 
-  /* Extra info                                                                         */
-  /* For the alternate functions, check the datasheet 'Alternate functions'             */
-  /* AFR[0]=pin 0 to 7, AFR[1]=pin 8 to 15, each pin has 4 bits for selection           */
-  /* So AFR[0] &~(0x00000FF0) = AFR[0] & 0xFFFFF00F -> Reset the bits for PA0 & PA1     */
-  /* 4 << (0 * 4) -> Value 4 shifted one nibble to get to PA0 position  -> 0x00000004   */
-  /* 4 << (1 * 4) -> Value 4 shifted two nibbles to get to PA1 position -> 0x00000040   */
+	/* (2) AF6 for LPUART1 signals, the line is explained in detail below it */
+	MODIFY_REG( GPIOA->AFR[0], GPIO_AFRL_AFSEL0|GPIO_AFRL_AFSEL1, (6 << GPIO_AFRL_AFSEL0_Pos) | (6 << GPIO_AFRL_AFSEL1_Pos) );
+
+	/* Extra info                                                                         		   */
+	/* For the alternate functions, check the datasheet 'Alternate functions'             		   */
+	/* AFR[0]=pin 0 to 7, AFR[1]=pin 8 to 15, each pin has 4 bits for selection           		   */
+	/* So first clear the bits associated with those pins  -> GPIO_AFRL_AFSEL0|GPIO_AFRL_AFSEL1    */
+	/* Then select 6 on both positions   */
+	/* 6 << GPIO_AFRL_AFSEL0_Pos  -> 0x00000006   */
+	/* 6 << GPIO_AFRL_AFSEL1_Pos  -> 0x00000060   */
 }
 void LPUART1_Configure_Setup(void){
 	uint32_t tickstart;
 
     /* Enable the peripheral clock USART1 */
-    RCC->APB1ENR |= RCC_APB1ENR_LPUART1EN;
+	SET_BIT( RCC->APB1ENR, RCC_APB1ENR_LPUART1EN);
     /* Configure USART1 */
     /* System clock is 16MHz (1MHz oversampling by 16), 19200 baud (both already divided by 100) */
     LPUART1->BRR = (256*160000)/192;//19200??
 
-    LPUART1->CR2 |= USART_CR2_SWAP; /* Swap RX and TX this needs to be set before CR1_UE is set */
+   // SET_BIT(LPUART1->CR2, USART_CR2_SWAP); /* Swap RX and TX this needs to be set before CR1_UE is set */
 
     /* 8 data bit, 1 start bit, 1 stop bit, no parity */
-    LPUART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+    SET_BIT( LPUART1->CR1, USART_CR1_TE | USART_CR1_RE | USART_CR1_UE);
     /* Extra info                                 */
     /* USART2->CR1 = USART2 Control register      */
     /* 8/1/1 no parity is default                 */
@@ -94,9 +95,9 @@ void LPUART1_Configure_Setup(void){
 			return;
 		}
     }
-	LPUART1->ICR |= USART_ICR_TCCF;  /* Clear TC flag  (no bit for receive) */
-	LPUART1->CR1 |= USART_CR1_RXNEIE; /* Enable Transmission Complete and receive interrupt */
-	LPUART1->CR3 |= USART_CR3_DMAT;
+    SET_BIT( LPUART1->ICR, USART_ICR_TCCF);   /* Clear TC flag  (no bit for receive) */
+    SET_BIT(LPUART1->CR1, USART_CR1_RXNEIE);  /* Enable Transmission Complete and receive interrupt */
+    SET_BIT(LPUART1->CR3, USART_CR3_DMAT);    /* Enable DMA for transmission */
 
 	/* Configure Interrupt */
 	/* Set priority for USART1_IRQn */

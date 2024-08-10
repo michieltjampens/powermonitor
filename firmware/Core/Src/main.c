@@ -149,7 +149,8 @@ void init(void){
 
     /* Read the settings from the internal E²PROM */
     //loadSettings();
-    pacAddress = 0x1C;//pacSettings.pacAddress; // Get the read address
+    findI2CDevices();
+    pacAddress = 0x10;//pacSettings.pacAddress; // Get the read address
 
     // Check if I2C hardware is found
     LPUART1_writeText("I>PAC1954:");
