@@ -38,7 +38,7 @@
     <!-- Defining the various streams that need to be read -->
     <stream id="powmon" type="serial">
       <eol>crlf</eol>
-      <port>COM8</port>
+      <port>COM16</port>
       <serialsettings>19200,8,1,none</serialsettings>
     </stream>
   </streams>
