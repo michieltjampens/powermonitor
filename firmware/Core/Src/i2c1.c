@@ -82,9 +82,9 @@ uint8_t I2C1_transmitData( uint8_t address, uint8_t length, uint8_t *data){
 uint8_t I2C1_start(){
 	uint32_t tickstart;
 	// Enable auto-end, set amount of bytes to send and the address shifted for R/W bit
-	SET_BIT(I2C1->ICR, I2C_ICR_NACKCF); // Make sure this is cleared
+	SET_BIT( I2C1->ICR, I2C_ICR_NACKCF ); // Make sure this is cleared
 
-	I2C1->CR2 |= I2C_CR2_START;
+	SET_BIT( I2C1->CR2, I2C_CR2_START );
 
 	tickstart = Tick;
 	while ((I2C1->CR2 & I2C_CR2_START)==0) { // Wait for start
@@ -198,7 +198,7 @@ uint8_t I2C1_ReadData( uint8_t i2c_Address, uint8_t reg, uint8_t length){
 
 	// Enable auto-end, set amount of bytes to receive and the address shifted for R/W bit
 	I2C1->CR2 = I2C_CR2_AUTOEND | (length<<16) | I2C_CR2_RD_WRN |(i2c_Address<<1);
-	I2C1->CR2 |= I2C_CR2_START; // Send start condition
+	SET_BIT( I2C1->CR2, I2C_CR2_START ); // Send start condition
 
 	// Now wait till all the data was received...
 	// This probably should be doable with ISR but for some reason STOPF is unreliable

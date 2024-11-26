@@ -63,9 +63,6 @@ void LPUART1_Configure_GPIO(void){
 	/* For the alternate functions, check the datasheet 'Alternate functions'             		   */
 	/* AFR[0]=pin 0 to 7, AFR[1]=pin 8 to 15, each pin has 4 bits for selection           		   */
 	/* So first clear the bits associated with those pins  -> GPIO_AFRL_AFSEL0|GPIO_AFRL_AFSEL1    */
-	/* Then select 6 on both positions   */
-	/* 6 << GPIO_AFRL_AFSEL0_Pos  -> 0x00000006   */
-	/* 6 << GPIO_AFRL_AFSEL1_Pos  -> 0x00000060   */
 }
 void LPUART1_Configure_Setup(void){
 	uint32_t tickstart;
@@ -95,9 +92,9 @@ void LPUART1_Configure_Setup(void){
 			return;
 		}
     }
-    SET_BIT( LPUART1->ICR, USART_ICR_TCCF);   /* Clear TC flag  (no bit for receive) */
-    SET_BIT(LPUART1->CR1, USART_CR1_RXNEIE);  /* Enable Transmission Complete and receive interrupt */
-    SET_BIT(LPUART1->CR3, USART_CR3_DMAT);    /* Enable DMA for transmission */
+    SET_BIT( LPUART1->ICR, USART_ICR_TCCF );   /* Clear TC flag  (no bit for receive) */
+    SET_BIT( LPUART1->CR1, USART_CR1_RXNEIE );  /* Enable Transmission Complete and receive interrupt */
+    SET_BIT( LPUART1->CR3, USART_CR3_DMAT );    /* Enable DMA for transmission */
 
 	/* Configure Interrupt */
 	/* Set priority for USART1_IRQn */
