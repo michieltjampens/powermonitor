@@ -176,27 +176,27 @@ void init(void){
 void configure_IO(void){
   
   /* Enable the peripheral clock of GPIOA (inputs) and GPIOB (heartbeat) */
-  RCC->IOPENR |= RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN;
+	SET_BIT( RCC->IOPENR, RCC_IOPENR_GPIOAEN | RCC_IOPENR_GPIOBEN );
 
 
   /* INPUTS & Interrupts*/
   /* Enable the SYStemConfiguration peripheral clock, this handles interrupts */
-    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+  SET_BIT( RCC->APB2ENR, RCC_APB2ENR_SYSCFGEN);
   /* 
     A6 = U2 alert1
     A7 = U2 alert2
-  */  
-  GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODER_MODE6 | GPIO_MODER_MODE7)); // Make PA6 & PA7 inputs
+  */
+  CLEAR_BIT( GPIOA->MODER, GPIO_MODER_MODE6 | GPIO_MODER_MODE7 ); // Make PA6 & PA7 inputs
 
-  SYSCFG->EXTICR[1] &= ~(SYSCFG_EXTICR2_EXTI6_Msk|SYSCFG_EXTICR2_EXTI7_Msk); // First clear the bits that define the port of for pin 6 and 7 (inverse means all other bits remain as they were)
-  SYSCFG->EXTICR[1] |= (SYSCFG_EXTICR2_EXTI6_PA|SYSCFG_EXTICR2_EXTI7_PA); // Then set the pins 6 and 7 to select port A
+  CLEAR_BIT( SYSCFG->EXTICR[1], SYSCFG_EXTICR2_EXTI6_Msk|SYSCFG_EXTICR2_EXTI7_Msk ); // First clear the bits that define the port of for pin 6 and 7 (inverse means all other bits remain as they were)
+  SET_BIT( SYSCFG->EXTICR[1], SYSCFG_EXTICR2_EXTI6_PA|SYSCFG_EXTICR2_EXTI7_PA ); // Then set the pins 6 and 7 to select port A
 
   /* Next up is enabling the interrupt */
-  EXTI->IMR |= (EXTI_IMR_IM4|EXTI_IMR_IM6|EXTI_IMR_IM7); // Enable interrupt for both 6 and 7, no need to clear anything first
+  SET_BIT( EXTI->IMR, EXTI_IMR_IM4|EXTI_IMR_IM6|EXTI_IMR_IM7 ); // Enable interrupt for both 6 and 7, no need to clear anything first
 
   /* Next select the kind of edge to trigger on */
-  EXTI->RTSR &= ~(EXTI_RTSR_RT4_Msk|EXTI_RTSR_RT6_Msk|EXTI_RTSR_RT7_Msk);	// Clear rising edge
-  EXTI->FTSR |= (EXTI_FTSR_FT4 | EXTI_FTSR_FT6 | EXTI_FTSR_FT7);			// Set Falling edge
+  CLEAR_BIT(EXTI->RTSR, EXTI_RTSR_RT4|EXTI_RTSR_RT6|EXTI_RTSR_RT7 );	// Clear rising edge
+  SET_BIT( EXTI->FTSR, EXTI_FTSR_FT4 | EXTI_FTSR_FT6 | EXTI_FTSR_FT7 );	// Set Falling edge
 
   /* Finally enable the interrupt */
   NVIC_SetPriority(EXTI4_15_IRQn, 0x03); // This is for pins between 4 and 15 which 6 and 7 belong to, set to lowest priority
@@ -208,8 +208,8 @@ void configure_IO(void){
     PA3 = Heart beat led
     PB0 = PAC1954 PWRDN
   */
-  GPIOA->MODER = (GPIOA->MODER & ~(GPIO_MODER_MODE3))| (GPIO_MODER_MODE3_0);
-  GPIOB->MODER = (GPIOB->MODER & ~(GPIO_MODER_MODE0))| (GPIO_MODER_MODE0_0);
+  MODIFY_REG( GPIOA->MODER, GPIO_MODER_MODE3, GPIO_MODER_MODE3_0 );
+  MODIFY_REG( GPIOB->MODER, GPIO_MODER_MODE0, GPIO_MODER_MODE0_0 );
 
 }
 
