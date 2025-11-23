@@ -42,6 +42,7 @@
 	} VoltageCurrent;
 
 	uint8_t PAC1954_findAddress(void);
+	uint8_t PAC1954_setControl( uint8_t addr, uint16_t value );
 	uint8_t PAC1954_readVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur );
 	uint8_t PAC1954_readAvgVoltageCurrent( uint8_t address, VoltageCurrent *lastVoltCur );
 	uint32_t PAC1954_readAccCount( uint8_t address ); // Read the content of the accumulator counter register
@@ -50,6 +51,8 @@
 	uint8_t PAC1954_checkState(void);
 
 	// Alerts
+	uint8_t PAC1954_setAlert1( uint8_t addr, uint32_t value );
+	uint8_t PAC1954_setAlert2( uint8_t addr, uint32_t value );
 	uint32_t PAC1954_readAlertStatus(uint8_t address);
 	uint32_t PAC1954_readAlertEnable(uint8_t address);
 	uint8_t PAC1954_clearAlertEnable(uint8_t addr);
@@ -72,6 +75,7 @@
 	uint16_t PAC1954_readOPlimit( uint8_t address, uint8_t ch );
 	uint16_t PAC1954_readLimitReg( uint8_t address, uint8_t ch, uint8_t reg );
 	uint32_t PAC1954_read24bitRegister(uint8_t address,uint8_t reg);
+	uint16_t PAC1954_read16bitRegister(uint8_t address,uint8_t reg);
 
 	void PAC1954_applySettings( PacSettings * settings, PacChannel * channels, uint8_t cnt);
 

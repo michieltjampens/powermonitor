@@ -2,9 +2,9 @@
 <dcafs>
     <path delimiter=";" id="pm">
 		<defines>
-			<rsense1>0.05</rsense1>
-			<rsense2>0.10</rsense2>
-			<rsense3>0.20</rsense3>
+			<rsense1>0.10</rsense1>
+			<rsense2>0.05</rsense2>
+			<rsense3>0.025</rsense3>
 			<rsense4>1.00</rsense4>
 		</defines>
         <if start="VC:0x1">
